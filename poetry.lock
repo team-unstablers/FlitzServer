@@ -60,7 +60,21 @@ files = [
     {file = "tzdata-2024.2.tar.gz", hash = "sha256:7d85cc416e9382e69095b7bdf4afd9e3880418a2413feec7069d533d6b4e31cc"},
 ]
 
+[[package]]
+name = "uuid-v7"
+version = "1.0.0"
+description = "UUID v6 and v7 for Python 3.10+."
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "uuid_v7-1.0.0-py3-none-any.whl", hash = "sha256:b27f8e1a90ad5c81577f8eaebf9ef67ab8b4dc8d0838c4fcc2e57fd52ebf7fff"},
+    {file = "uuid_v7-1.0.0.tar.gz", hash = "sha256:56eb79baa5c6c5cf02e9e8ce7652bda666bd7671a49fc9a3c3d4565aa7e0ba3b"},
+]
+
+[package.extras]
+test = ["black", "coverage", "flake8", "gitchangelog", "isort", "mkdocs", "mypy", "pytest", "pytest-cov"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "3e25b1c0e2208c779e5d738cd7d52f535e00a536edff0b97f2ead2773e77e836"
+content-hash = "2371d90771bcf2ab1c28d88953b8a9967910c2558f85ce9605d9b320444dccd7"

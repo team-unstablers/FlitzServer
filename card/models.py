@@ -1,17 +1,15 @@
 from django.db import models
 
+from flitz.models import BaseModel
 from user.models import User
 
 # Create your models here.
 
-class OfficialCardAssetAuthor(models.Model):
+class OfficialCardAssetAuthor(BaseModel):
     name = models.CharField(max_length=64, null=False, blank=False)
     description = models.CharField(max_length=128, null=False, blank=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class OfficialCardAssetGroup(models.Model):
+class OfficialCardAssetGroup(BaseModel):
     title = models.CharField(max_length=32, null=False, blank=False)
     description = models.CharField(max_length=128, null=False, blank=False)
 
@@ -22,10 +20,7 @@ class OfficialCardAssetGroup(models.Model):
 
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class OfficialCardAsset(models.Model):
+class OfficialCardAsset(BaseModel):
     group = models.ForeignKey(OfficialCardAssetGroup, on_delete=models.CASCADE, related_name='assets')
 
     index = models.IntegerField(null=False, blank=False, default=0)
@@ -43,19 +38,15 @@ class OfficialCardAsset(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class OfficialCardAssetPurchase(models.Model):
+class OfficialCardAssetPurchase(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     group = models.ForeignKey(OfficialCardAssetGroup, on_delete=models.CASCADE)
 
-    created_at = models.DateTimeField(auto_now_add=True)
     refunded_at = models.DateTimeField(null=True, blank=True)
 
     refund_reason = models.CharField(max_length=128, null=True, blank=True)
 
-class Card(models.Model):
+class Card(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     title = models.CharField(max_length=32, null=False, blank=False)
@@ -64,10 +55,7 @@ class Card(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class UserCardAsset(models.Model):
+class UserCardAsset(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='asset_references')
 
@@ -81,10 +69,7 @@ class UserCardAsset(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class CardFlag(models.Model):
+class CardFlag(BaseModel):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='flags')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flagged_cards')
 
@@ -93,10 +78,7 @@ class CardFlag(models.Model):
 
     resolved_at = models.DateTimeField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class CardDistribution(models.Model):
+class CardDistribution(BaseModel):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='distributions')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_cards')
 
@@ -105,10 +87,9 @@ class CardDistribution(models.Model):
     altitude = models.FloatField(null=True, blank=True)
     accuracy = models.FloatField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-class CardVote(models.Model):
+class CardVote(BaseModel):
     class VoteType(models.IntegerChoices):
         UPVOTE = 1
         DOWNVOTE = 2
@@ -117,7 +98,4 @@ class CardVote(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='voted_cards')
 
     vote_type = models.IntegerField(choices=VoteType.choices)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
