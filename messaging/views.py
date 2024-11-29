@@ -29,7 +29,7 @@ class DMConversationViewSet(viewsets.ModelViewSet):
             .exists()
 
         if conflicts:
-            raise ValidationError(code=status.HTTP_409_CONFLICT)
+            raise ValidationError(detail="CONFLICT", code=status.HTTP_409_CONFLICT)
 
         return super().create(request, *args, **kwargs)
 
