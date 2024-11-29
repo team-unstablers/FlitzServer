@@ -70,8 +70,8 @@ class DMMessageViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         created_instance: DirectMessage = serializer.save()
+
         conversation = self.get_conversation()
         conversation.latest_message_id = created_instance.id
         conversation.save()
@@ -86,6 +86,10 @@ class DMMessageViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance: DirectMessage = self.get_object()
+
+        if instance.sender_id is not self.request.user.id:
+            raise Http404()
+
         instance.deleted_at = timezone.now()
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
