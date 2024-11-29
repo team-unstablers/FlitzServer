@@ -23,9 +23,12 @@ from rest_framework import routers
 from user.views import PublicUserViewSet
 from user_auth.views import request_token
 
+from card.views import PublicCardViewSet
+
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
+router.register(r'cards', PublicCardViewSet, basename='Card')
 
 urlpatterns = [
     path('', include(router.urls)),

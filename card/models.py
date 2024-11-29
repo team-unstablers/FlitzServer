@@ -5,6 +5,8 @@ from user.models import User
 
 # Create your models here.
 
+
+
 class OfficialCardAssetAuthor(BaseModel):
     name = models.CharField(max_length=64, null=False, blank=False)
     description = models.CharField(max_length=128, null=False, blank=False)
