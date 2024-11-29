@@ -11,7 +11,7 @@ from flitz.exceptions import UnsupportedOperationException
 
 class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PublicUserSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return User.objects.filter(disabled_at=None, fully_deleted_at=None)

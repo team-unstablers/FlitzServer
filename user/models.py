@@ -31,15 +31,6 @@ class UserBlock(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     blocked_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_users')
 
-class UserSession(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    description = models.CharField(max_length=64)
-
-    initiated_from = models.CharField(max_length=128, null=False, blank=False)
-
-    expires_at = models.DateTimeField(null=True, blank=True)
-    invalidated_at = models.DateTimeField(null=True, blank=True)
-
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.CharField(max_length=64, null=False, blank=False)

@@ -16,10 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import routers
 
 from user.views import PublicUserViewSet
+from user_auth.views import request_token
 
 router = routers.DefaultRouter()
 
@@ -27,5 +29,6 @@ router.register(r'users', PublicUserViewSet, basename='User')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('auth/token', csrf_exempt(request_token)),
     path('admin/', admin.site.urls),
 ]
