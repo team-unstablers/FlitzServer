@@ -36,6 +36,9 @@ class DMConversationViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
 
+    def partial_update(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
     def destroy(self, request, *args, **kwargs):
         instance: DirectMessageConversation = self.get_object()
         instance.deleted_at = timezone.now()
@@ -82,6 +85,9 @@ class DMMessageViewSet(viewsets.ModelViewSet):
         raise UnsupportedOperationException()
 
     def update(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
+    def partial_update(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
 
     def destroy(self, request, *args, **kwargs):
