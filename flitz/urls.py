@@ -20,12 +20,15 @@ from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import routers
 
+from messaging.views import DMConversationViewSet, DMMessageViewSet
 from user.views import PublicUserViewSet
 from user_auth.views import request_token
 
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
+router.register(r'direct/(?P<conversation_id>[0-9a-fA-F\-]+)/message', DMMessageViewSet, basename='DirectMessage')
+router.register(r'direct', DMConversationViewSet, basename='DirectMessageConversation')
 
 urlpatterns = [
     path('', include(router.urls)),
