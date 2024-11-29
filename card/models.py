@@ -1,5 +1,9 @@
-from django.db import models
+from datetime import datetime, timezone
 
+from dacite import from_dict
+from django.db import models, transaction
+
+from card.objdef import CardObject
 from flitz.models import BaseModel
 from user.models import User
 
@@ -57,6 +61,19 @@ class Card(BaseModel):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
+    def remove_orphaned_assets(self):
+        card_obj = from_dict(data_class=CardObject, data=self.content)
+
+        current_references = card_obj.extract_asset_references()
+        current_references_ids = [ref.id for ref in current_references]
+
+        references_in_db = self.asset_references.all()
+
+        with transaction.atomic():
+            for reference in references_in_db:
+                if reference.object_key not in current_references_ids:
+                    reference.delete_asset()
+
 class UserCardAsset(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='asset_references')
@@ -70,6 +87,12 @@ class UserCardAsset(BaseModel):
 
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
+
+    def delete_asset(self):
+        # TODO: perform s3 delete
+
+        self.deleted_at = datetime.now()
+        self.save()
 
 class CardFlag(BaseModel):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='flags')

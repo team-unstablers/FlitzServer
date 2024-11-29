@@ -5,6 +5,9 @@ from dataclasses import dataclass, asdict
 
 from dacite import from_dict
 
+from card.models import UserCardAsset
+
+
 @dataclass
 class ElementSize:
     width: float
@@ -73,3 +76,21 @@ class CardObject:
 
     def as_dict(self) -> dict:
         return asdict(self)
+
+    def sanity_check(self):
+        return True
+
+    def extract_asset_references(self) -> List[AssetReference]:
+        references = []
+
+        if self.background is not None:
+            references.append(self.background)
+
+        for element in self.elements:
+            if isinstance(element, ImageElement):
+                references.append(element.source)
+
+        return references
+
+
+

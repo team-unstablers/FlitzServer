@@ -1,3 +1,4 @@
+from dacite import from_dict
 from django.shortcuts import render, get_object_or_404
 
 from rest_framework import permissions, viewsets
@@ -6,8 +7,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from card.objdef import CardObject, CardSchemaVersion
-from card.serializers import PublicCardSerializer, PublicSelfCardSerializer
-from card.models import Card
+from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer
+from card.models import Card, UserCardAsset
 from flitz.pagination import CursorPagination
 from user.models import User
 
@@ -16,14 +17,19 @@ from flitz.exceptions import UnsupportedOperationException
 # Create your views here.
 
 class PublicCardViewSet(viewsets.ModelViewSet):
-    serializer_class = PublicCardSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PublicCardListSerializer
+
+        return PublicCardSerializer
+
     def get_queryset(self):
-        queryset = Card.objects.filter(deleted_at=None)
+        queryset = Card.objects.filter(deleted_at=None).select_related('user')
 
         if self.action == 'list':
-            queryset = queryset.filter(user=self.request.user)
+            queryset = queryset.filter(user=self.request.user).defer('content')
 
         return queryset
 
@@ -40,6 +46,54 @@ class PublicCardViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
+    def update(self, request, *args, **kwargs):
+        if self.get_object().user != request.user:
+            raise UnsupportedOperationException()
+
+        data = request.data
+        card_dict = data['content']
+
+        if card_dict is None:
+            raise UnsupportedOperationException()
+
+        card_obj = from_dict(data_class=CardObject, data=data['content'])
+
+        if not card_obj.sanity_check():
+            raise UnsupportedOperationException()
+
+        data['content'] = card_obj.as_dict()
+
+        return super().update(request, *args, **kwargs)
+
+
+    @action(detail=True, methods=['GET'], url_path='asset-references')
+    def get_asset_references(self, request: Request, pk, *args, **kwargs):
+        queryset = UserCardAsset.objects.filter(card_id=pk)
+        serializer = PublicSelfUserCardAssetSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['POST'], url_path='asset-references')
+    def create_asset_reference(self, request: Request, pk, *args, **kwargs):
+        card = get_object_or_404(Card, pk=pk)
+
+        if card.user != request.user:
+            raise UnsupportedOperationException()
+
+        raise NotImplementedError()
+
+        asset = UserCardAsset.objects.create(
+            user=request.user,
+            card=card,
+            type=request.data['type'],
+            public_url=request.data['public_url'],
+            mimetype=request.data['mimetype'],
+            size=request.data['size']
+        )
+
+        serializer = PublicSelfUserCardAssetSerializer(asset)
+
+        return Response(serializer.data)
 
     @action(detail=False, methods=['GET'], url_path='retrieved')
     def get_retrieved(self, request: Request, *args, **kwargs):

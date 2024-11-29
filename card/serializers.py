@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
+from user.serializers import PublicSimpleUserSerializer
+
 from card.models import Card, UserCardAsset
+
 
 class PublicSelfUserCardAssetSerializer(serializers.ModelSerializer):
     """
@@ -16,15 +19,17 @@ class PublicCardSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Card
-        fields = ('id', 'title', 'content', 'created_at', 'updated_at')
+        fields = ('id', 'user', 'title', 'content', 'created_at', 'updated_at')
+
+    user = PublicSimpleUserSerializer()
 
 
-class PublicSelfCardSerializer(serializers.ModelSerializer):
+class PublicCardListSerializer(serializers.ModelSerializer):
     """
     자신의 카드 정보를 fetch할 때 사용되는 serializer
     """
     class Meta:
         model = Card
-        fields = ('id', 'title', 'content', 'asset_references', 'created_at', 'updated_at')
+        fields = ('id', 'user', 'title', 'created_at', 'updated_at')
 
-    asset_references = PublicSelfUserCardAssetSerializer(many=True, read_only=True)
+    user = PublicSimpleUserSerializer()
