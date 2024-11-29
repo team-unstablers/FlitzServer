@@ -147,6 +147,32 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': DEFAULT_RENDERER_CLASSES,
     'DEFAULT_PAGINATION_CLASS': 'flitz.pagination.CursorPagination',
     'PAGE_SIZE': 25,
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+    ]
 }
 
-
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": "flitz-server-static",
+            "access_key": "flitzdev",
+            "secret_key": "flitzdev123",
+            "endpoint_url": "http://localhost:9000"
+        }
+    },
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": "flitz",
+            "access_key": "flitzdev",
+            "secret_key": "flitzdev123",
+            "endpoint_url": "http://localhost:9000",
+            "object_parameters": {
+                "ACL": "public-read"
+            },
+        }
+    }
+}
