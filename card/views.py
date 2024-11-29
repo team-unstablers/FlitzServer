@@ -1,12 +1,15 @@
 from dacite import from_dict
+from django.core.files.uploadedfile import UploadedFile
+from django.core.files.storage import default_storage, Storage
+from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, parsers
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from card.objdef import CardObject, CardSchemaVersion
+from card.objdef import CardObject, CardSchemaVersion, AssetReference
 from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer
 from card.models import Card, UserCardAsset
 from flitz.pagination import CursorPagination
@@ -66,34 +69,75 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
-    @action(detail=True, methods=['GET'], url_path='asset-references')
+    @action(detail=True, methods=['GET', 'POST'], url_path='asset-references')
+    def asset_references(self, request: Request, pk, *args, **kwargs):
+        if request.method == 'GET':
+            return self.get_asset_references(request, pk, *args, **kwargs)
+        elif request.method == 'POST':
+            return self.create_asset_reference(request, pk, *args, **kwargs)
+
     def get_asset_references(self, request: Request, pk, *args, **kwargs):
-        queryset = UserCardAsset.objects.filter(card_id=pk)
+        queryset = UserCardAsset.objects.filter(card_id=pk, deleted_at=None)
         serializer = PublicSelfUserCardAssetSerializer(queryset, many=True)
 
         return Response(serializer.data)
 
-    @action(detail=True, methods=['POST'], url_path='asset-references')
+    @action(detail=True, methods=['POST'], url_path='asset-references', url_name='create_asset_reference')
     def create_asset_reference(self, request: Request, pk, *args, **kwargs):
         card = get_object_or_404(Card, pk=pk)
 
         if card.user != request.user:
             raise UnsupportedOperationException()
 
-        raise NotImplementedError()
+        file: UploadedFile = request.data['file']
+        extension = file.name.split('.')[-1]
 
-        asset = UserCardAsset.objects.create(
-            user=request.user,
-            card=card,
-            type=request.data['type'],
-            public_url=request.data['public_url'],
-            mimetype=request.data['mimetype'],
-            size=request.data['size']
-        )
+        if extension is None:
+            raise UnsupportedOperationException()
+
+        if file.content_type.startswith('image'):
+            type = UserCardAsset.AssetType.IMAGE
+        elif file.content_type.startswith('video'):
+            type = UserCardAsset.AssetType.VIDEO
+        elif file.content_type.startswith('audio'):
+            type = UserCardAsset.AssetType.AUDIO
+        else:
+            type = UserCardAsset.AssetType.OTHER
+
+
+        with transaction.atomic():
+            asset = UserCardAsset.objects.create(
+                user=request.user,
+                card=card,
+                type=type,
+                object_key='',
+                public_url='',
+                mimetype=file.content_type,
+                size=file.size
+            )
+
+            asset.object_key = f'card_assets/{asset.id}.{extension}'
+
+            storage: Storage = default_storage
+            storage.save(asset.object_key, file)
+
+            asset.public_url = storage.url(asset.object_key).split('?')[0]
+            asset.save()
+
 
         serializer = PublicSelfUserCardAssetSerializer(asset)
-
         return Response(serializer.data)
+
+    @action(detail=True, methods=['PUT'], url_path='asset-references/gc')
+    def garbage_collect_asset_references(self, request: Request, pk, *args, **kwargs):
+        card = get_object_or_404(Card, pk=pk)
+
+        if card.user != request.user:
+            raise UnsupportedOperationException()
+
+        card.remove_orphaned_assets()
+
+        return Response()
 
     @action(detail=False, methods=['GET'], url_path='retrieved')
     def get_retrieved(self, request: Request, *args, **kwargs):

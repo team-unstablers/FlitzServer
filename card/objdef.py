@@ -5,8 +5,6 @@ from dataclasses import dataclass, asdict
 
 from dacite import from_dict
 
-from card.models import UserCardAsset
-
 
 @dataclass
 class ElementSize:

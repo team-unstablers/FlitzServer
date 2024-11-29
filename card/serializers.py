@@ -33,3 +33,5 @@ class PublicCardListSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'title', 'created_at', 'updated_at')
 
     user = PublicSimpleUserSerializer()
+
+

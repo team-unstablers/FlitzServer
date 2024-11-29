@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from dacite import from_dict
+from django.core.files.storage import default_storage, Storage
 from django.db import models, transaction
 
 from card.objdef import CardObject
@@ -71,14 +72,20 @@ class Card(BaseModel):
 
         with transaction.atomic():
             for reference in references_in_db:
-                if reference.object_key not in current_references_ids:
+                if reference.id not in current_references_ids:
                     reference.delete_asset()
 
 class UserCardAsset(BaseModel):
+    class AssetType(models.TextChoices):
+        IMAGE = 'image'
+        VIDEO = 'video'
+        AUDIO = 'audio'
+        OTHER = 'other'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='asset_references')
 
-    type = models.CharField(max_length=32, null=False, blank=False)
+    type = models.CharField(max_length=32, null=False, blank=False, choices=AssetType.choices)
     object_key = models.CharField(max_length=2048, null=False, blank=False)
     public_url = models.CharField(max_length=2048, null=False, blank=False)
 
@@ -89,7 +96,12 @@ class UserCardAsset(BaseModel):
     banned_at = models.DateTimeField(null=True, blank=True)
 
     def delete_asset(self):
-        # TODO: perform s3 delete
+        try:
+            storage: Storage = default_storage
+            storage.delete(self.object_key)
+        except Exception as e:
+            print(e)
+
 
         self.deleted_at = datetime.now()
         self.save()
