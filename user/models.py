@@ -7,6 +7,11 @@ from flitz.models import UUIDv7Field, BaseModel
 # Create your models here.
 
 class User(AbstractUser):
+    class Meta:
+        indexes = [
+            models.Index(fields=['username'])
+        ]
+
     id = UUIDv7Field(primary_key=True, editable=False)
 
     username = models.CharField(max_length=24, unique=True)
