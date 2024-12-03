@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-9@s8#wqep7zu^ksyb0$mq#zw)zxjng+(2108!+=z(y1h-*v9wj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -160,7 +160,7 @@ STORAGES = {
             "bucket_name": "flitz-server-static",
             "access_key": "flitzdev",
             "secret_key": "flitzdev123",
-            "endpoint_url": "http://localhost:9000"
+            "endpoint_url": "http://cheese-mbpr14.local:9000"
         }
     },
     "default": {
@@ -169,7 +169,7 @@ STORAGES = {
             "bucket_name": "flitz",
             "access_key": "flitzdev",
             "secret_key": "flitzdev123",
-            "endpoint_url": "http://localhost:9000",
+            "endpoint_url": "http://cheese-mbpr14.local:9000",
             "object_parameters": {
                 "ACL": "public-read"
             },

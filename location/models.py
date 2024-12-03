@@ -16,3 +16,16 @@ class UserLocation(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class DiscoverySession(BaseModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True, related_name='discovery_session')
+    is_active = models.BooleanField(default=False)
+
+class DiscoveryHistory(BaseModel):
+    session = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered')
+    discovered = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered_by')
+
+
+
+
