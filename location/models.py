@@ -19,7 +19,7 @@ class UserLocation(models.Model):
 
 
 class DiscoverySession(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True, related_name='discovery_session')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discovery_session')
     is_active = models.BooleanField(default=False)
 
 class DiscoveryHistory(BaseModel):
