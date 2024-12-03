@@ -54,7 +54,7 @@ class OfficialCardAssetPurchase(BaseModel):
     refund_reason = models.CharField(max_length=128, null=True, blank=True)
 
 class Card(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cards')
 
     title = models.CharField(max_length=32, null=False, blank=False)
     content = models.JSONField(null=False, blank=False)
