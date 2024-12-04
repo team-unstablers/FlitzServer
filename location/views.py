@@ -15,9 +15,8 @@ from location.models import DiscoverySession, DiscoveryHistory
 
 # Create your views here.
 
-class LocationViewSet(viewsets.ViewSet):
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_name='discovery/start')
+class FlitzWaveViewSet(viewsets.ViewSet):
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/start')
     def start_discovery(self, request: Request):
         # 디스커버리 세션을 시작합니다.
 
@@ -39,7 +38,7 @@ class LocationViewSet(viewsets.ViewSet):
             'session_id': discovery_session.pk
         })
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_name='discovery/stop')
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/stop')
     def stop_discovery(self, request: Request):
         DiscoverySession.objects.filter(
             user=request.user,
@@ -52,7 +51,7 @@ class LocationViewSet(viewsets.ViewSet):
             'is_success': True
         })
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_name='discovery/report')
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/report')
     def report_discovery(self, request: Request):
         session_id = request.data['session_id']
         discovered_session_id = request.data['discovered_session_id']
@@ -77,7 +76,7 @@ class LocationViewSet(viewsets.ViewSet):
         # 오늘 하루동안 같은 사람을 발견한 기록이 있는지 확인합니다.
         prev_discover_history = DiscoveryHistory.objects.filter(
             session=session,
-            discovered_session=discovered_session,
+            discovered=discovered_session,
 
             created_at__gt=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         )
@@ -89,20 +88,21 @@ class LocationViewSet(viewsets.ViewSet):
         # 서로 발견한 사용자를 기록합니다.
         history = DiscoveryHistory.objects.create(
             session=session,
-            discovered_session=discovered_session
+            discovered=discovered_session
         )
 
         opposite_history = DiscoveryHistory.objects.filter(
             session=discovered_session,
-            discovered_session=session,
+            discovered=session,
             created_at__gt=datetime.now() - timedelta(minutes=30) # 30분 이내에 서로를 발견해야 합니다
         )
 
         if opposite_history.exists():
             with transaction.atomic():
+                print("distributed cards")
                 # 서로를 발견하였으므로, 카드를 교환합니다.
                 distrib_a = CardDistribution.objects.create(
-                    card=session.user.cards[0],
+                    card=session.user.main_card,
                     user=discovered_session.user,
 
                     latitude=0,
@@ -112,7 +112,7 @@ class LocationViewSet(viewsets.ViewSet):
                 )
 
                 distrib_b = CardDistribution.objects.create(
-                    card=discovered_session.user.cards[0],
+                    card=discovered_session.user.main_card,
                     user=session.user,
 
                     latitude=0,

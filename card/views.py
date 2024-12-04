@@ -45,7 +45,7 @@ class ReceivedCardViewSet(viewsets.ModelViewSet):
             id__in = CardDistribution.objects.filter(
                 user=self.request.user,
                 deleted_at=None
-            )
+            ).values_list('card_id')
         )
 
     def create(self, request, *args, **kwargs):
@@ -105,6 +105,18 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         data['content'] = card_obj.as_dict()
 
         return super().update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['PUT'], url_path='set-as-main')
+    def set_card_as_main(self, request: Request, pk, *args, **kwargs):
+        card = get_object_or_404(Card, pk=pk)
+
+        if card.user != request.user:
+            raise UnsupportedOperationException()
+
+        request.user.main_card = card
+        request.user.save()
+
+        return Response({'is_success': True}, status=200)
 
 
     @action(detail=True, methods=['GET', 'POST'], url_path='asset-references')
@@ -176,7 +188,3 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         card.remove_orphaned_assets()
 
         return Response()
-
-    @action(detail=False, methods=['GET'], url_path='retrieved')
-    def get_retrieved(self, request: Request, *args, **kwargs):
-        pass
