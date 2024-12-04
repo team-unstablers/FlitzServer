@@ -10,14 +10,52 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from card.objdef import CardObject, CardSchemaVersion, AssetReference
-from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer
-from card.models import Card, UserCardAsset
+from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer, \
+    CardDistributionSerializer
+from card.models import Card, UserCardAsset, CardDistribution
 from flitz.pagination import CursorPagination
 from user.models import User
 
 from flitz.exceptions import UnsupportedOperationException
 
 # Create your views here.
+
+class CardDistributionViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CardDistributionSerializer
+
+    def get_queryset(self):
+        return CardDistribution.objects.filter(
+            card__in=Card.objects.filter(user=self.request.user),
+            deleted_at=None
+        )
+
+    def create(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
+class ReceivedCardViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        return PublicCardListSerializer
+
+
+    def get_queryset(self):
+        return Card.objects.filter(
+            id__in = CardDistribution.objects.filter(
+                user=self.request.user,
+                deleted_at=None
+            )
+        )
+
+    def create(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
+    def destroy(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
+    def update(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
 
 class PublicCardViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]

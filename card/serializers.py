@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from user.serializers import PublicSimpleUserSerializer
 
-from card.models import Card, UserCardAsset
+from card.models import Card, UserCardAsset, CardDistribution
 
 
 class PublicSelfUserCardAssetSerializer(serializers.ModelSerializer):
@@ -35,3 +35,14 @@ class PublicCardListSerializer(serializers.ModelSerializer):
     user = PublicSimpleUserSerializer()
 
 
+
+class CardDistributionSerializer(serializers.ModelSerializer):
+    """
+    카드 배포 정보를 fetch할 때 사용되는 serializer
+    """
+    class Meta:
+        model = CardDistribution
+        fields = ('id', 'card', 'user')
+
+    card = PublicCardListSerializer()
+    user = PublicSimpleUserSerializer()
