@@ -25,9 +25,13 @@ from user_auth.views import request_token
 
 from card.views import PublicCardViewSet, ReceivedCardViewSet, CardDistributionViewSet
 
+from location.views import FlitzWaveViewSet
+
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
+
+router.register(r'wave', FlitzWaveViewSet, basename='FlitzWave')
 
 router.register(r'cards/distributed', CardDistributionViewSet, basename='DistributedCard')
 router.register(r'cards/received', ReceivedCardViewSet, basename='ReceivedCard')
