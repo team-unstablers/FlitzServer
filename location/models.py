@@ -26,6 +26,13 @@ class DiscoveryHistory(BaseModel):
     session = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered')
     discovered = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered_by')
 
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    altitude = models.FloatField(null=True, blank=True)
+    accuracy = models.FloatField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 
 
