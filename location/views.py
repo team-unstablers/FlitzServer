@@ -56,6 +56,12 @@ class FlitzWaveViewSet(viewsets.ViewSet):
         session_id = request.data['session_id']
         discovered_session_id = request.data['discovered_session_id']
 
+        latitude = request.data['latitude']
+        longitude = request.data['longitude']
+        altitude = request.data['altitude']
+
+        accuracy = request.data['accuracy']
+
         session = DiscoverySession.objects.filter(
             id=session_id,
             user=request.user,
@@ -88,7 +94,13 @@ class FlitzWaveViewSet(viewsets.ViewSet):
         # 서로 발견한 사용자를 기록합니다.
         history = DiscoveryHistory.objects.create(
             session=session,
-            discovered=discovered_session
+            discovered=discovered_session,
+
+            latitude=latitude,
+            longitude=longitude,
+            altitude=altitude,
+
+            accuracy=accuracy
         )
 
         opposite_history = DiscoveryHistory.objects.filter(
@@ -98,27 +110,35 @@ class FlitzWaveViewSet(viewsets.ViewSet):
         )
 
         if opposite_history.exists():
-            with transaction.atomic():
-                print("distributed cards")
-                # 서로를 발견하였으므로, 카드를 교환합니다.
+            opposite_history = opposite_history.first()
+
+            # 서로를 발견하였으므로, 카드를 교환합니다.
+            if not CardDistribution.objects.filter(
+                card=session.user.main_card,
+                user=discovered_session.user
+            ).exists():
                 distrib_a = CardDistribution.objects.create(
                     card=session.user.main_card,
                     user=discovered_session.user,
 
-                    latitude=0,
-                    longitude=0,
-                    altitude=0,
-                    accuracy=0,
+                    latitude=history.latitude,
+                    longitude=history.longitude,
+                    altitude=history.altitude,
+                    accuracy=history.accuracy
                 )
 
+            if not CardDistribution.objects.filter(
+                card=discovered_session.user.main_card,
+                user=session.user
+            ).exists():
                 distrib_b = CardDistribution.objects.create(
                     card=discovered_session.user.main_card,
                     user=session.user,
 
-                    latitude=0,
-                    longitude=0,
-                    altitude=0,
-                    accuracy=0,
+                    latitude=opposite_history.latitude,
+                    longitude=opposite_history.longitude,
+                    altitude=opposite_history.altitude,
+                    accuracy=opposite_history.accuracy
                 )
 
 
