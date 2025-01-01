@@ -64,7 +64,20 @@ def request_token(request: HttpRequest):
         raise UnsupportedOperationException()
 
 
+def create_user(request: HttpRequest):
+    if request.method != 'POST':
+        raise UnsupportedOperationException()
 
+    try:
+        payload: TokenRequestPayload = json.loads(request.body)
 
+        user = User.objects.create(
+            username=payload['username'],
+            password=payload['password'],
+        )
+
+        return HttpResponse(status=201)
+    except Exception as e:
+        pass
 
 
