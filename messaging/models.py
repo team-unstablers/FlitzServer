@@ -1,3 +1,6 @@
+from datetime import datetime
+from django.core.files.storage import default_storage, Storage
+
 from django.db import models
 from django.contrib.postgres.indexes import GinIndex
 
@@ -31,6 +34,41 @@ class DirectMessage(BaseModel):
     content = models.JSONField(null=False, blank=False)
 
     deleted_at = models.DateTimeField(null=True, blank=True)
+
+class DirectMessageAttachment(BaseModel):
+    class AttachmentType(models.TextChoices):
+        IMAGE = 'image'
+        VIDEO = 'video'
+        AUDIO = 'audio'
+        OTHER = 'other'
+
+    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='attachments')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    type = models.CharField(max_length=32, choices=AttachmentType.choices)
+
+    object_key = models.CharField(max_length=2048)
+    public_url = models.CharField(max_length=2048)
+
+    thumbnail_key = models.CharField(max_length=2048, null=True, blank=True)
+    thumbnail_url = models.CharField(max_length=2048, null=True, blank=True)
+
+    mimetype = models.CharField(max_length=128)
+    size = models.IntegerField()
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    def delete_attachment(self):
+        try:
+            storage: Storage = default_storage
+            storage.delete(self.object_key)
+
+            if self.thumbnail_key:
+                storage.delete(self.thumbnail_key)
+        except Exception as e:
+            print(e)
+            
+        self.deleted_at = datetime.now()
+        self.save()
 
 class DirectMessageFlag(BaseModel):
     class FlagReason(models.TextChoices):

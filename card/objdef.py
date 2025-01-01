@@ -3,8 +3,6 @@ from typing import List, Optional, TypedDict, Literal, Dict
 from enum import Enum
 from dataclasses import dataclass, asdict
 
-from dacite import from_dict
-
 
 @dataclass
 class ElementSize:
