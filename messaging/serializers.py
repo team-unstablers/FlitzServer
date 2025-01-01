@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
 from flitz.exceptions import UnsupportedOperationException
-from messaging.models import DirectMessageParticipant, DirectMessage, DirectMessageFlag, DirectMessageConversation
+from messaging.models import DirectMessageParticipant, DirectMessage, DirectMessageFlag, DirectMessageConversation, DirectMessageAttachment
 from user.models import User
 from user.serializers import PublicUserSerializer
 
 
-class DMParticipantSerializer(serializers.ModelSerializer):
+class DirectMessageParticipantSerializer(serializers.ModelSerializer):
     """
     | write: unsupported
     | read: user(dict), read_at
@@ -31,7 +31,7 @@ class DMParticipantSerializer(serializers.ModelSerializer):
         fields = (*read_only_fields,)
 
 
-class DMConversationSerializer(serializers.ModelSerializer):
+class DirectMessageConversationSerializer(serializers.ModelSerializer):
     """
     | write: initial_participants(id[])
     | read: latest_message, participants
@@ -44,7 +44,7 @@ class DMConversationSerializer(serializers.ModelSerializer):
         many=True,
         write_only=True
     )
-    participants = DMParticipantSerializer(
+    participants = DirectMessageParticipantSerializer(
         many=True,
         read_only=True
     )
@@ -73,7 +73,7 @@ class DMConversationSerializer(serializers.ModelSerializer):
         fields = (*read_only_fields, 'initial_participants')
 
 
-class DMMessageSerializer(serializers.ModelSerializer):
+class DirectMessageSerializer(serializers.ModelSerializer):
     """
     | write: sent_by(id), parent_conversation(id), content
     | read: sender, content
@@ -108,7 +108,7 @@ class DMMessageSerializer(serializers.ModelSerializer):
         fields = (*read_only_fields, 'content', 'sent_by', 'parent_conversation')
 
 
-class DMFlagSerializer(serializers.ModelSerializer):
+class DirectMessageFlagSerializer(serializers.ModelSerializer):
     """
     | write: target_message(id), reason, user_description
     | read: conversation(dict), user(dict), message(dict), reason, user_description, resolved_at
@@ -116,7 +116,7 @@ class DMFlagSerializer(serializers.ModelSerializer):
     | 시리얼라이저를 통해서는 create 만 지원. update 는 UnsupportedOperationException 을 발생시킵니다.
     """
 
-    conversation = DMConversationSerializer(
+    conversation = DirectMessageConversationSerializer(
         read_only=True
     )
 
@@ -124,7 +124,7 @@ class DMFlagSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    message = DMMessageSerializer(
+    message = DirectMessageSerializer(
         read_only=True
     )
     target_message = serializers.PrimaryKeyRelatedField(
@@ -160,3 +160,12 @@ class DMFlagSerializer(serializers.ModelSerializer):
             *read_only_fields,
             'target_message',
         )
+
+
+class DirectMessageAttachmentSerializer(serializers.ModelSerializer):
+    """
+    DM 첨부파일 정보를 fetch할 때 사용되는 serializer
+    """
+    class Meta:
+        model = DirectMessageAttachment
+        fields = ('id', 'type', 'public_url', 'mimetype', 'size', 'created_at', 'updated_at')
