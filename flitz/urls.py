@@ -20,7 +20,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from rest_framework import routers
 
-from messaging.views import DMConversationViewSet, DMMessageViewSet
+from messaging.views import DirectMessageConversationViewSet, DirectMessageViewSet, DirectMessageAttachmentViewSet
 from user.views import PublicUserViewSet
 from user_auth.views import request_token
 
@@ -31,8 +31,9 @@ from location.views import FlitzWaveViewSet
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
-router.register(r'direct/(?P<conversation_id>[0-9a-fA-F\-]+)/message', DMMessageViewSet, basename='DirectMessage')
-router.register(r'direct', DMConversationViewSet, basename='DirectMessageConversation')
+router.register(r'conversation/(?P<conversation_id>[0-9a-fA-F\-]+)/message', DirectMessageViewSet, basename='DirectMessage')
+router.register(r'conversation/(?P<conversation_id>[0-9a-fA-F\-]+)/attachments', DirectMessageAttachmentViewSet, basename='DirectMessage')
+router.register(r'conversation', DirectMessageConversationViewSet, basename='DirectMessageConversation')
 
 router.register(r'wave', FlitzWaveViewSet, basename='FlitzWave')
 
