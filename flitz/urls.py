@@ -24,11 +24,21 @@ from messaging.views import DMConversationViewSet, DMMessageViewSet
 from user.views import PublicUserViewSet
 from user_auth.views import request_token
 
+from card.views import PublicCardViewSet, ReceivedCardViewSet, CardDistributionViewSet
+
+from location.views import FlitzWaveViewSet
+
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
 router.register(r'direct/(?P<conversation_id>[0-9a-fA-F\-]+)/message', DMMessageViewSet, basename='DirectMessage')
 router.register(r'direct', DMConversationViewSet, basename='DirectMessageConversation')
+
+router.register(r'wave', FlitzWaveViewSet, basename='FlitzWave')
+
+router.register(r'cards/distributed', CardDistributionViewSet, basename='DistributedCard')
+router.register(r'cards/received', ReceivedCardViewSet, basename='ReceivedCard')
+router.register(r'cards', PublicCardViewSet, basename='Card')
 
 urlpatterns = [
     path('', include(router.urls)),

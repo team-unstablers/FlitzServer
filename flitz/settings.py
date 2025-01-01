@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-9@s8#wqep7zu^ksyb0$mq#zw)zxjng+(2108!+=z(y1h-*v9wj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -85,7 +85,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    },
 }
 
 
@@ -119,7 +119,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
@@ -132,12 +131,48 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'user.User'
 
+DEFAULT_RENDERER_CLASSES = (
+    'rest_framework.renderers.JSONRenderer',
+)
+
+if DEBUG:
+    DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    )
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'user_auth.authentication.UserSessionAuthentication',
     ],
+    'DEFAULT_RENDERER_CLASSES': DEFAULT_RENDERER_CLASSES,
     'DEFAULT_PAGINATION_CLASS': 'flitz.pagination.CursorPagination',
     'PAGE_SIZE': 25,
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+    ]
 }
 
-
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": "flitz-server-static",
+            "access_key": "flitzdev",
+            "secret_key": "flitzdev123",
+            "endpoint_url": "http://cheese-mbpr14.local:9000"
+        }
+    },
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": "flitz",
+            "access_key": "flitzdev",
+            "secret_key": "flitzdev123",
+            "endpoint_url": "http://cheese-mbpr14.local:9000",
+            "object_parameters": {
+                "ACL": "public-read"
+            },
+        }
+    }
+}

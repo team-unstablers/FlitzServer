@@ -13,7 +13,12 @@ from flitz.exceptions import UnsupportedOperationException
 
 class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PublicUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'register':
+            return [permissions.AllowAny()]
+
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         return User.objects.filter(disabled_at=None, fully_deleted_at=None)
@@ -35,3 +40,19 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = PublicUserSerializer(user)
 
         return Response(serializer.data)
+
+    @action(detail=False, methods=['POST'], url_path='register')
+    def register(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = User.objects.create_user(
+            username=username,
+            email=None,
+            password=password
+        )
+
+        user.is_active = True
+        user.save()
+
+        return Response({'is_success': True}, status=201)
