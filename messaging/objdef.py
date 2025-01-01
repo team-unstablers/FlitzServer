@@ -31,7 +31,12 @@ class DirectMessageTextContent:
 @dataclass
 class DirectMessageAttachmentContent:
     type: DirectMessageAttachmentContentType
+
+    attachment_type: str
     attachment_id: str
+
+    public_url: Optional[str]
+    thumbnail_url: Optional[str]
 
 DirectMessageContent = DirectMessageTextContent | DirectMessageAttachmentContent
 
