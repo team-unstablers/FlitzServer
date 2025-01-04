@@ -8,7 +8,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name')
+        fields = ('id', 'username', 'display_name', 'profile_image_url')
 
 class PublicSimpleUserSerializer(serializers.ModelSerializer):
     """
@@ -16,7 +16,7 @@ class PublicSimpleUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name')
+        fields = ('id', 'username', 'display_name', 'profile_image_url')
 
 class PublicSelfUserSerializer(serializers.ModelSerializer):
     """
@@ -24,6 +24,6 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name', 'free_coins', 'paid_coins')
+        fields = ('id', 'username', 'display_name', 'profile_image_url', 'free_coins', 'paid_coins')
 
 

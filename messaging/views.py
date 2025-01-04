@@ -5,8 +5,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.http import Http404
 from django.utils import timezone
-from rest_framework import viewsets, permissions, status, parsers
-from rest_framework.decorators import action
+from rest_framework import viewsets, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
@@ -14,8 +13,8 @@ from flitz.exceptions import UnsupportedOperationException
 
 from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment
 from messaging.objdef import DirectMessageAttachmentContent
-from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer, DirectMessageAttachmentSerializer
-from messaging.thumbgen import generate_thumbnail
+from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer
+from flitz.thumbgen import generate_thumbnail
 
 
 class DirectMessageConversationViewSet(viewsets.ModelViewSet):

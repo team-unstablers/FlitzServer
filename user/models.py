@@ -19,6 +19,9 @@ class User(AbstractUser):
 
     disabled_at = models.DateTimeField(null=True, blank=True)
 
+    profile_image_key = models.CharField(max_length=2048, null=True, blank=True)
+    profile_image_url = models.CharField(max_length=2048, null=True, blank=True)
+
     free_coins = models.IntegerField(default=0)
     paid_coins = models.IntegerField(default=0)
 
