@@ -64,8 +64,8 @@ class UserMatch(BaseModel):
     class Meta:
         unique_together = ['user_a', 'user_b']
 
-    user_a = models.ForeignKey(User, on_delete=models.CASCADE)
-    user_b = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_a = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
+    user_b = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
 
     @classmethod
     def create_match(cls, user_a: User, user_b: User):
