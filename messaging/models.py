@@ -14,6 +14,15 @@ class DirectMessageConversation(BaseModel):
     latest_message = models.ForeignKey('DirectMessage', on_delete=models.SET_NULL, null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+    @classmethod
+    def create_conversation(cls, user_a: User, user_b: User):
+        conversation = cls.objects.create()
+
+        DirectMessageParticipant.objects.create(conversation=conversation, user=user_a)
+        DirectMessageParticipant.objects.create(conversation=conversation, user=user_b)
+
+        return conversation
+
 class DirectMessageParticipant(BaseModel):
     conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='participants')
     user = models.ForeignKey(User, on_delete=models.CASCADE)

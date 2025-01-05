@@ -124,9 +124,14 @@ class CardDistribution(BaseModel):
     altitude = models.FloatField(null=True, blank=True)
     accuracy = models.FloatField(null=True, blank=True)
 
+    dismissed_at = models.DateTimeField(null=True, blank=True)
+
     deleted_at = models.DateTimeField(null=True, blank=True)
 
 class CardVote(BaseModel):
+    class Meta:
+        unique_together = ['card', 'user']
+
     class VoteType(models.IntegerChoices):
         UPVOTE = 1
         DOWNVOTE = 2

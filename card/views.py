@@ -1,3 +1,6 @@
+from datetime import datetime
+from idlelib.pyparse import trans
+
 from dacite import from_dict
 from django.core.files.uploadedfile import UploadedFile
 from django.core.files.storage import default_storage, Storage
@@ -12,9 +15,9 @@ from rest_framework.response import Response
 from card.objdef import CardObject, CardSchemaVersion, AssetReference
 from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer, \
     CardDistributionSerializer
-from card.models import Card, UserCardAsset, CardDistribution
+from card.models import Card, UserCardAsset, CardDistribution, CardVote
 from flitz.pagination import CursorPagination
-from user.models import User
+from user.models import User, UserLike
 
 from flitz.exceptions import UnsupportedOperationException
 
@@ -26,12 +29,70 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return CardDistribution.objects.filter(
-            card__in=Card.objects.filter(user=self.request.user),
+            user=self.request.user,
+            dismissed_at=None,
             deleted_at=None
         )
 
     def create(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
+
+    def destroy(self, request, *args, **kwargs):
+        distribution: CardDistribution = self.get_object()
+        distribution.deleted_at = datetime.now()
+
+        distribution.save()
+
+        return Response({'is_success': True}, status=200)
+
+    @action(detail=True, methods=['PUT'], url_path='like')
+    def like(self, request, pk, *args, **kwargs):
+        distribution: CardDistribution = self.get_object()
+        with transaction.atomic():
+            CardVote.objects.create(
+                card=distribution.card,
+                user=request.user,
+
+                vote_type = CardVote.VoteType.UPVOTE
+            )
+
+            distribution.dismissed_at = datetime.now()
+            distribution.save()
+
+            like_exists = UserLike.objects.filter(
+                user=distribution.card.user,
+                liked_by=request.user
+            ).exists()
+
+            if not like_exists:
+                UserLike.objects.create(
+                    user=distribution.card.user,
+                    liked_by=request.user
+                )
+
+                UserLike.try_match_user(distribution.card.user, request.user)
+
+        return Response({'is_success': True}, status=200)
+
+    @action(detail=True, methods=['PUT'], url_path='dislike')
+    def dislike(self, request, pk, *args, **kwargs):
+        distribution: CardDistribution = self.get_object()
+
+        with transaction.atomic():
+            CardVote.objects.create(
+                card=distribution.card,
+                user=request.user,
+
+                vote_type = CardVote.VoteType.DOWNVOTE
+            )
+
+            distribution.dismissed_at = datetime.now()
+            distribution.save()
+
+        return Response({'is_success': True}, status=200)
+
+
+
 
 class ReceivedCardViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]

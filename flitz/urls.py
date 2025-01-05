@@ -37,8 +37,8 @@ router.register(r'conversation', DirectMessageConversationViewSet, basename='Dir
 
 router.register(r'wave', FlitzWaveViewSet, basename='FlitzWave')
 
-router.register(r'cards/distributed', CardDistributionViewSet, basename='DistributedCard')
-router.register(r'cards/received', ReceivedCardViewSet, basename='ReceivedCard')
+router.register(r'cards/distribution', CardDistributionViewSet, basename='CardDistribution')
+# router.register(r'cards/received', ReceivedCardViewSet, basename='ReceivedCard')
 router.register(r'cards', PublicCardViewSet, basename='Card')
 
 urlpatterns = [
