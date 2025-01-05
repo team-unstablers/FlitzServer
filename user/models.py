@@ -36,6 +36,46 @@ class UserBlock(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     blocked_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_users')
 
+class UserLike(BaseModel):
+    class Meta:
+        unique_together = ['user', 'liked_by']
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    liked_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_users')
+
+    @classmethod
+    def try_match_user(cls, user_a: User, user_b: User):
+        user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
+
+        match_exists = UserMatch.objects.filter(user_a=user_a, user_b=user_b).exists()
+
+        if match_exists:
+            # assertion failed: match_exists == False
+            return
+
+        like_a_exists = cls.objects.filter(user=user_a, liked_by=user_b).exists()
+        like_b_exists = cls.objects.filter(user=user_b, liked_by=user_a).exists()
+
+        if like_a_exists and like_b_exists:
+            UserMatch.create_match(user_a, user_b)
+
+
+class UserMatch(BaseModel):
+    class Meta:
+        unique_together = ['user_a', 'user_b']
+
+    user_a = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_b = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    @classmethod
+    def create_match(cls, user_a: User, user_b: User):
+        user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
+
+        cls.objects.create(user_a=user_a, user_b=user_b)
+
+        from messaging.models import DirectMessageConversation
+        DirectMessageConversation.create_conversation(user_a, user_b)
+
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.CharField(max_length=64, null=False, blank=False)
