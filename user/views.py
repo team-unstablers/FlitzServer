@@ -14,6 +14,7 @@ from user.models import User
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer
 
 from flitz.exceptions import UnsupportedOperationException
+from user_auth.models import UserSession
 
 # Create your views here.
 
@@ -39,6 +40,22 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = PublicSelfUserSerializer(user)
 
         return Response(serializer.data)
+
+    @action(detail=False, methods=['PUT'], url_path='self/apns-token')
+    def set_apns_token(self, request, *args, **kwargs):
+        session: UserSession = self.request.auth
+        apns_token = request.data.get('apns_token')
+
+        if apns_token is None or len(apns_token) == 0:
+            return Response({'is_success': False})
+        
+        if session.apns_token == apns_token:
+            return Response({'is_success': False})
+
+        session.apns_token = apns_token
+        session.save()
+
+        return Response({'is_success': True})
 
     @action(detail=False, methods=['POST'], url_path='self/profile-image')
     def set_profile_image(self, request, *args, **kwargs):
