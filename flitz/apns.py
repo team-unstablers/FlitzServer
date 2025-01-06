@@ -1,5 +1,5 @@
 from typing import List
-import requests
+import httpx
 import jwt
 import time
 
@@ -16,6 +16,7 @@ class APNS:
         self.sandbox = sandbox
         self.base_url = self.DEV_URL if sandbox else self.PROD_URL
         self.jwt = self._generate_token()
+        self.client = httpx.Client(http2=True)
     
     def _generate_token(self) -> str:
         with open(self.key_file, 'r') as f:
@@ -52,5 +53,6 @@ class APNS:
             "apns-expiration": "0"
         }
         
-        for token in device_tokens:
-            requests.post(self.base_url + token, json=data, headers=headers)
+        with httpx.Client(http2=True) as client:
+            for token in device_tokens:
+                client.post(self.base_url + token, json=data, headers=headers)
