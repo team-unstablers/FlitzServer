@@ -1,8 +1,11 @@
-from django.contrib.auth.models import AbstractUser
+from typing import Optional
 
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from flitz.models import UUIDv7Field, BaseModel
+from flitz.apns import APNS
+
 
 # Create your models here.
 
@@ -31,6 +34,20 @@ class User(AbstractUser):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def send_push_message(self, title: str, body: str, data: Optional[dict]=None):
+        """
+        사용자에게 푸시 메시지를 보냅니다.
+        """
+
+        # 원래대로라면 유효한 세션은 하나여야 하지만, 추후 여러 기기에서 로그인할 수 있도록 수정될 수 있으므로
+        valid_sessions = self.sessions.filter(invalited_at=None)
+        apns_tokens = valid_sessions.values('apns_token')
+
+        apns = APNS.default()
+        apns.send_notification(title, body, apns_tokens, data)
+
+
 
 class UserBlock(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -75,6 +92,25 @@ class UserMatch(BaseModel):
 
         from messaging.models import DirectMessageConversation
         DirectMessageConversation.create_conversation(user_a, user_b)
+
+        # TODO: i18n
+        user_a.send_push_message(
+            '매칭 성공!',
+            f'{user_b.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
+            {
+                'type': 'match',
+                'user': user_b.id
+            }
+        )
+
+        user_b.send_push_message(
+            '매칭 성공!',
+            f'{user_a.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
+            {
+                'type': 'match',
+                'user': user_a.id
+            }
+        )
 
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
