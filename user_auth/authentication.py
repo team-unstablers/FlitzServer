@@ -33,7 +33,7 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
                 if session.expires_at < datetime.now(tz=timezone.utc):
                     return None
 
-            return session.user, None
+            return session.user, session
 
         except jwt.InvalidTokenError:
             return None

@@ -176,3 +176,8 @@ STORAGES = {
         }
     }
 }
+
+APNS_KEY_FILE = "FlitzAPNS.p8"
+APNS_TEAM_ID = "XHA76UVA95"
+APNS_KEY_ID = "CM6QLAL76W"
+APNS_BUNDLE_ID = "pl.unstabler.flitz"
