@@ -16,6 +16,9 @@ django-storages = {extras = ["s3"], version = "^1.14.4"}
 pillow = "^11.0.0"
 requests = "^2.32.3"
 httpx = {extras = ["http2"], version = "^0.28.1"}
+celery = {extras = ["msgpack", "redis", "s3"], version = "^5.4.0"}
+flower = "^2.0.1"
+pytz = "^2024.2"
 
 
 [build-system]

@@ -6,7 +6,6 @@ from django.db import models
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
 
-
 # Create your models here.
 
 class User(AbstractUser):
@@ -38,6 +37,8 @@ class User(AbstractUser):
     def send_push_message(self, title: str, body: str, data: Optional[dict]=None):
         """
         사용자에게 푸시 메시지를 보냅니다.
+
+        :note: 이 메소드를 직접 호출하지 마십시오! 대신 `user.tasks.send_push_message`를 사용하십시오. (Celery task)
         """
 
         # 원래대로라면 유효한 세션은 하나여야 하지만, 추후 여러 기기에서 로그인할 수 있도록 수정될 수 있으므로
@@ -91,24 +92,30 @@ class UserMatch(BaseModel):
         cls.objects.create(user_a=user_a, user_b=user_b)
 
         from messaging.models import DirectMessageConversation
-        DirectMessageConversation.create_conversation(user_a, user_b)
+        conversation = DirectMessageConversation.create_conversation(user_a, user_b)
+
+        import user.tasks as user_tasks
 
         # TODO: i18n
-        user_a.send_push_message(
+        user_tasks.send_push_message.delay_on_commit(
+            user_a.id,
             '매칭 성공!',
             f'{user_b.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {
                 'type': 'match',
-                'user': user_b.id
+                'user_id': user_b.id,
+                'conversation_id': conversation.id
             }
         )
 
-        user_b.send_push_message(
+        user_tasks.send_push_message.delay_on_commit(
+            user_b.id,
             '매칭 성공!',
             f'{user_a.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {
                 'type': 'match',
-                'user': user_a.id
+                'user_id': user_a.id,
+                'conversation_id': conversation.id
             }
         )
 

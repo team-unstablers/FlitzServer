@@ -177,4 +177,6 @@ pyrightconfig.json
 .DS_Store
 
 devenv/minio-data
+devenv/redis-data
+
 *.p8
