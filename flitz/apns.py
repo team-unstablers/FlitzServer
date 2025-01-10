@@ -72,19 +72,26 @@ class APNS:
 
         self.base_url = self.DEV_URL if sandbox else self.PROD_URL
 
-    def send_push(self, title: str, body: str, device_tokens: List[str]):
-        jwt = self.identity.jwt_token()
+    def send_notification(self, title: str, body: str, device_tokens: List[str], user_info: dict=None):
+        if user_info is None:
+            payload = dict()
+        else:
+            payload = user_info.copy()
 
-        data = {
-            "aps": {
-                "alert": {
-                    "title": title,
-                    "body": body
-                }
+        payload['aps'] = {
+            "alert": {
+                "title": title,
+                "body": body
             }
         }
+
+        self.send_push(payload=payload, device_tokens=device_tokens)
+
+    def send_push(self, payload: dict, device_tokens: List[str]):
+        jwt_token = self.identity.jwt_token()
+
         headers = {
-            "authorization": "bearer " + jwt,
+            "authorization": "bearer " + jwt_token,
             "apns-topic": self.identity.bundle_id,
             "apns-push-type": "alert",
             "apns-priority": "10",
@@ -93,4 +100,4 @@ class APNS:
         
         with httpx.Client(http2=True) as client:
             for token in device_tokens:
-                client.post(self.base_url + token, json=data, headers=headers)
+                client.post(self.base_url + token, json=payload, headers=headers)
