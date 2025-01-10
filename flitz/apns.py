@@ -56,6 +56,7 @@ def apns_default_identity() -> APNSIdentity:
     return APNS_GLOBAL_IDENTITY
 
 
+APNS_GLOBAL_INSTANCE: Optional['APNS'] = None
 
 class APNS:
     PROD_URL = "https://api.push.apple.com/3/device/"
@@ -65,6 +66,15 @@ class APNS:
     sandbox: bool
 
     base_url: str
+
+    @staticmethod
+    def default() -> 'APNS':
+        global APNS_GLOBAL_INSTANCE
+
+        if APNS_GLOBAL_INSTANCE is None:
+            APNS_GLOBAL_INSTANCE = APNS(sandbox=settings.APNS_USE_SANDBOX)
+
+        return APNS_GLOBAL_INSTANCE
 
     def __init__(self, identity: APNSIdentity = apns_default_identity(), sandbox: bool=False):
         self.identity = identity
