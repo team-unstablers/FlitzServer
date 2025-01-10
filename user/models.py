@@ -6,9 +6,6 @@ from django.db import models
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
 
-import user.tasks as user_tasks
-
-
 # Create your models here.
 
 class User(AbstractUser):
@@ -96,6 +93,8 @@ class UserMatch(BaseModel):
 
         from messaging.models import DirectMessageConversation
         conversation = DirectMessageConversation.create_conversation(user_a, user_b)
+
+        import user.tasks as user_tasks
 
         # TODO: i18n
         user_tasks.send_push_message.delay_on_commit(
