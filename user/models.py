@@ -1,7 +1,7 @@
 from typing import Optional
 
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import models, transaction
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
@@ -48,6 +48,29 @@ class User(AbstractUser):
         apns = APNS.default()
         apns.send_notification(title, body, apns_tokens, data)
 
+    def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None):
+        from location.models import UserLocation
+
+        with transaction.atomic():
+            location = UserLocation.objects.get_or_create(
+                defaults={
+                    'latitude': 0.0,
+                    'longitude': 0.0,
+                    'altitude': 0.0,
+                    'accuracy': 0.0,
+                },
+                user=self
+            )
+
+            location.latitude = latitude
+            location.longitude = longitude
+            location.altitude = altitude
+            location.accuracy = accuracy
+
+            location.update_timezone()
+            location.save()
+
+        return location
 
 
 class UserBlock(BaseModel):
