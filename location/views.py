@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from django.shortcuts import render
 
-from rest_framework import permissions, viewsets, parsers
+from rest_framework import permissions, viewsets, parsers, status
 from rest_framework.decorators import action, permission_classes
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from card.models import CardDistribution
 from flitz.exceptions import UnsupportedOperationException
 from location.models import DiscoverySession, DiscoveryHistory
+from location.serializers import DiscoveryReportSerializer
 
 
 # Create your views here.
@@ -18,6 +19,9 @@ from location.models import DiscoverySession, DiscoveryHistory
 class FlitzWaveViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/start')
     def start_discovery(self, request: Request):
+        """
+        사용자들이 서로를 발견하고 카드를 교환하는 기능인 FlitzWave (디스커버리 세션)을 시작합니다.
+        """
         # 디스커버리 세션을 시작합니다.
 
         # 기존 디스커버리 세션을 전부 비활성화합니다.
@@ -40,6 +44,9 @@ class FlitzWaveViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/stop')
     def stop_discovery(self, request: Request):
+        """
+        FlitzWave (디스커버리 세션)을 중지합니다.
+        """
         DiscoverySession.objects.filter(
             user=request.user,
             is_active=True
@@ -53,23 +60,23 @@ class FlitzWaveViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/report')
     def report_discovery(self, request: Request):
-        session_id = request.data['session_id']
-        discovered_session_id = request.data['discovered_session_id']
-
-        latitude = request.data['latitude']
-        longitude = request.data['longitude']
-        altitude = request.data['altitude']
-
-        accuracy = request.data['accuracy']
-
+        """
+        다른 사용자를 발견했음을 서버에 보고합니다.
+        """
+        serializer = DiscoveryReportSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+        
         session = DiscoverySession.objects.filter(
-            id=session_id,
+            id=validated_data['session_id'],
             user=request.user,
             is_active=True
         ).first()
 
         discovered_session = DiscoverySession.objects.filter(
-            id=discovered_session_id,
+            id=validated_data['discovered_session_id'],
             is_active=True
         ).exclude(
             user=request.user
@@ -96,11 +103,11 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             session=session,
             discovered=discovered_session,
 
-            latitude=latitude,
-            longitude=longitude,
-            altitude=altitude,
+            latitude=validated_data['latitude'],
+            longitude=validated_data['longitude'],
+            altitude=validated_data['altitude'],
 
-            accuracy=accuracy
+            accuracy=validated_data['accuracy']
         )
 
         opposite_history = DiscoveryHistory.objects.filter(
