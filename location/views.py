@@ -2,6 +2,9 @@ from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.shortcuts import render
+from django.utils import timezone
+from timezonefinder import TimezoneFinder
+import pytz
 
 from rest_framework import permissions, viewsets, parsers, status
 from rest_framework.decorators import action, permission_classes
@@ -10,8 +13,25 @@ from rest_framework.response import Response
 
 from card.models import CardDistribution
 from flitz.exceptions import UnsupportedOperationException
-from location.models import DiscoverySession, DiscoveryHistory
+from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.serializers import DiscoveryReportSerializer
+
+
+def get_timezone_from_coordinates(latitude, longitude):
+    """위도/경도로부터 시간대를 결정합니다."""
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
+    if timezone_str:
+        return pytz.timezone(timezone_str)
+    return pytz.UTC  # 기본값으로 UTC 반환
+
+
+def get_today_start_in_timezone(tz):
+    """특정 시간대의 '오늘' 시작 시간을 계산합니다."""
+    now = timezone.now()
+    local_time = now.astimezone(tz)
+    today_start = local_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    return today_start
 
 
 # Create your views here.
@@ -86,12 +106,20 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             # FIXME
             raise UnsupportedOperationException()
 
+        # 사용자의 위치 정보로부터 시간대를 결정합니다
+        user_timezone = get_timezone_from_coordinates(
+            validated_data['latitude'], 
+            validated_data['longitude']
+        )
+        
+        # 해당 시간대의 '오늘' 시작 시간을 계산합니다
+        today_start = get_today_start_in_timezone(user_timezone)
+        
         # 오늘 하루동안 같은 사람을 발견한 기록이 있는지 확인합니다.
         prev_discover_history = DiscoveryHistory.objects.filter(
             session=session,
             discovered=discovered_session,
-
-            created_at__gt=datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            created_at__gt=today_start
         )
 
         if prev_discover_history.exists():
@@ -110,10 +138,12 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             accuracy=validated_data['accuracy']
         )
 
+        # 30분 이내에 서로를 발견했는지 확인 (사용자의 현지 시간대 기준)
+        time_threshold = timezone.now().astimezone(user_timezone) - timedelta(minutes=30)
         opposite_history = DiscoveryHistory.objects.filter(
             session=discovered_session,
             discovered=session,
-            created_at__gt=datetime.now() - timedelta(minutes=30) # 30분 이내에 서로를 발견해야 합니다
+            created_at__gt=time_threshold
         )
 
         if opposite_history.exists():
