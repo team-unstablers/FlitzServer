@@ -42,7 +42,7 @@ class User(AbstractUser):
         """
 
         # 원래대로라면 유효한 세션은 하나여야 하지만, 추후 여러 기기에서 로그인할 수 있도록 수정될 수 있으므로
-        valid_sessions = self.sessions.filter(invalited_at=None)
+        valid_sessions = self.sessions.filter(invalidated_at=None)
         apns_tokens = valid_sessions.values('apns_token')
 
         apns = APNS.default()
@@ -122,7 +122,7 @@ class UserMatch(BaseModel):
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.CharField(max_length=64, null=False, blank=False)
-    content = models.JSONField(null=False),
+    content = models.JSONField(null=False, default=dict)
 
     read_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
