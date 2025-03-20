@@ -19,7 +19,7 @@ class UserMatcher:
         """
 
         # 사용자의 위치 정보로부터 시간대를 결정합니다
-        discoverer_timezone = self.discoverer.user.location.timezone
+        discoverer_timezone = self.discoverer.user.location.latest().timezone_obj
 
         # 해당 시간대의 '오늘' 시작 시간을 계산합니다
         discoverer_today_start = get_today_start_in_timezone(discoverer_timezone)
@@ -36,7 +36,7 @@ class UserMatcher:
         서로 발견한 사용자를 기록합니다.
         """
 
-        discoverer_location = self.discoverer.user.location
+        discoverer_location = self.discoverer.user.location.latest()
 
         return DiscoveryHistory.objects.create(
             session=self.discoverer,
@@ -116,11 +116,11 @@ class UserMatcher:
             history_self = self.__create_discover_history()
 
             # 30분 이내에 서로를 발견했는지 확인 (사용자의 현지 시간대 기준)
-            discoverer_timezone = self.discoverer.user.location.timezone
+            discoverer_timezone = self.discoverer.user.location.latest().timezone_obj
             time_threshold = timezone.now().astimezone(discoverer_timezone) - timezone.timedelta(minutes=30)
 
             # 반대로, 상대편(discovered)이 나(discoverer)를 발견했는지 확인합니다.
-            history_opponent_qs = DiscoverySession.objects.filter(
+            history_opponent_qs = DiscoveryHistory.objects.filter(
                 session=self.discovered,
                 discovered=self.discoverer,
                 created_at__gt=time_threshold

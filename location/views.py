@@ -80,8 +80,8 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             request.user.update_location(
                 latitude=validated_data['latitude'],
                 longitude=validated_data['longitude'],
-                altitude=validated_data['altitude'],
-                accuracy=validated_data['accuracy']
+                altitude=validated_data.get('altitude'),
+                accuracy=validated_data.get('accuracy')
             )
 
         return Response({
@@ -103,8 +103,8 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             request.user.update_location(
                 latitude=validated_data['latitude'],
                 longitude=validated_data['longitude'],
-                altitude=validated_data['altitude'],
-                accuracy=validated_data['accuracy']
+                altitude=validated_data.get('altitude'),
+                accuracy=validated_data.get('accuracy')
             )
 
             session = DiscoverySession.objects.filter(
