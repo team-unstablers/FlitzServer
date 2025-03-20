@@ -4,6 +4,8 @@ from flitz.models import UUIDv7Field, BaseModel
 
 from user.models import User
 
+from location.utils import get_timezone_from_coordinates, get_today_start_in_timezone
+
 # Create your models here.
 
 class UserLocation(models.Model):
@@ -14,8 +16,13 @@ class UserLocation(models.Model):
     altitude = models.FloatField(null=True, blank=True)
     accuracy = models.FloatField(null=True, blank=True)
 
+    timezone = models.CharField(max_length=64, null=False, blank=False, default='UTC')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def update_timezone(self):
+        self.timezone = get_timezone_from_coordinates(self.latitude, self.longitude)
 
 
 class DiscoverySession(BaseModel):
