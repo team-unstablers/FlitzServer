@@ -27,15 +27,14 @@ class TokenRequestPayload(TypedDict):
 
 def request_token(request: HttpRequest):
     if request.method != 'POST':
-        raise UnsupportedOperationException()
-
+        return HttpResponse(status=405)
     try:
         payload: TokenRequestPayload = json.loads(request.body)
 
         user = User.objects.get(username=payload['username'])
 
         if not user.check_password(payload['password']):
-            raise UnsupportedOperationException()
+            return HttpResponse(status=401)
 
         payload.setdefault('device_info', 'unknown')
         # create session
@@ -61,12 +60,12 @@ def request_token(request: HttpRequest):
     except Exception as e:
         # TODO: logging
         print(e)
-        raise UnsupportedOperationException()
+        return HttpResponse(status=401)
 
 
 def create_user(request: HttpRequest):
     if request.method != 'POST':
-        raise UnsupportedOperationException()
+        return HttpResponse(status=405)
 
     try:
         payload: TokenRequestPayload = json.loads(request.body)
@@ -79,5 +78,6 @@ def create_user(request: HttpRequest):
         return HttpResponse(status=201)
     except Exception as e:
         pass
+        return HttpResponse(status=400)
 
 
