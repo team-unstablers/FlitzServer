@@ -202,13 +202,7 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         opponent_distance = self.distance_to(self.opponent.location)
         cond_distance = opponent_distance >= settings.CARD_REVEAL_DISTANCE_ASSERTIVE
 
-        # opponent가 **차단/제한 목록**에 등록되어 있으면 카드 표시하지 않음
-        cond_blocked = not self.user.blocked_users.filter(id=self.opponent.id).exists()
-
-        # opponent가 **shadowban** 처리되어 있으면 카드 표시하지 않음
-        cond_shadowban = True # FIXME: NOT IMPLEMENTED
-
-        return cond_distance and cond_blocked and cond_shadowban
+        return cond_distance
 
     @property
     def is_okay_to_reveal_soft(self) -> bool:
