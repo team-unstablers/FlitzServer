@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from django.db import transaction
 
 from safety.models import UserBlock, UserContactsTrigger
-from safety.utils.phonehash import hash_phone_number
+from safety.utils.phone_number import hash_phone_number
 from flitz.test_utils import create_test_user
 
 # Test salt for phone number hashing

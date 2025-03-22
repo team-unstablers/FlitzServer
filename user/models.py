@@ -5,7 +5,7 @@ from django.db import models, transaction
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
-from safety.utils.phonehash import hash_phone_number
+from safety.utils.phone_number import hash_phone_number
 
 
 # Create your models here.
