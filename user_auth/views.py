@@ -1,39 +1,39 @@
-from typing import TypedDict, Optional
-
 import json
 
 from django.http import HttpResponse
 from django.http.request import HttpRequest
 
 from user.models import User
-
 from user_auth.models import UserSession
+from user_auth.serializers import TokenRequestSerializer, UserCreationSerializer
 
 # Create your views here.
-
-class TokenRequestPayload(TypedDict):
-    username: str
-    password: str
-
-    device_info: Optional[str]
 
 def request_token(request: HttpRequest):
     if request.method != 'POST':
         return HttpResponse(status=405)
     try:
-        payload: TokenRequestPayload = json.loads(request.body)
+        data = json.loads(request.body)
+        serializer = TokenRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return HttpResponse(status=400)
+        
+        validated_data = serializer.validated_data
 
-        user = User.objects.get(username=payload['username'])
-
-        if not user.check_password(payload['password']):
+        try:
+            user = User.objects.get(username=validated_data['username'])
+        except User.DoesNotExist:
             return HttpResponse(status=401)
 
-        payload.setdefault('device_info', 'unknown')
+        if not user.check_password(validated_data['password']):
+            return HttpResponse(status=401)
+
         # create session
         session = UserSession.objects.create(
             user=user,
-            description=payload['device_info'],
+            description=validated_data['device_info'],
             initiated_from=request.META.get('REMOTE_ADDR'),
+            apns_token=validated_data.get('apns_token'),
         )
 
         # create token
@@ -55,16 +55,21 @@ def create_user(request: HttpRequest):
         return HttpResponse(status=405)
 
     try:
-        payload: TokenRequestPayload = json.loads(request.body)
+        data = json.loads(request.body)
+        serializer = UserCreationSerializer(data=data)
+        if not serializer.is_valid():
+            return HttpResponse(status=400)
+        
+        validated_data = serializer.validated_data
 
         user = User.objects.create(
-            username=payload['username'],
-            password=payload['password'],
+            username=validated_data['username'],
         )
+        user.set_password(validated_data['password'])
+        user.save()
 
         return HttpResponse(status=201)
     except Exception as e:
-        pass
+        # TODO: logging
+        print(e)
         return HttpResponse(status=400)
-
-
