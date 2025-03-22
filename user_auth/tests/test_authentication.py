@@ -8,21 +8,14 @@ from datetime import datetime, timedelta, timezone
 
 from user_auth.models import UserSession
 from user_auth.authentication import UserSessionAuthentication
+from flitz.test_utils import create_test_user, create_test_session, create_test_user_with_session
 
 User = get_user_model()
 
 class UserSessionAuthenticationTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            display_name='Test User',
-            password='testpassword'
-        )
-        self.session = UserSession.objects.create(
-            user=self.user,
-            description='Test Session',
-            initiated_from='127.0.0.1'
-        )
+        # 사용자와 세션을 함께 생성
+        self.user, self.session = create_test_user_with_session()
         self.auth = UserSessionAuthentication()
         self.factory = APIRequestFactory()
         
