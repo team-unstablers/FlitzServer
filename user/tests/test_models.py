@@ -5,7 +5,7 @@ from unittest import mock, skip
 from unittest.mock import patch, MagicMock
 import unittest
 
-from user.models import UserBlock, UserLike, UserMatch, Notification
+from user.models import UserLike, UserMatch, Notification
 from flitz.test_utils import create_test_user
 
 User = get_user_model()
@@ -26,21 +26,6 @@ class UserModelTests(TestCase):
         self.assertIsNone(self.user1.fully_deleted_at)
         self.assertIsNotNone(self.user1.created_at)
         self.assertIsNotNone(self.user1.updated_at)
-
-
-class UserBlockTests(TestCase):
-    def setUp(self):
-        self.user1 = create_test_user(1)
-        self.user2 = create_test_user(2)
-
-    def test_user_block_creation(self):
-        """사용자 차단 관계 생성 테스트"""
-        block = UserBlock.objects.create(user=self.user1, blocked_by=self.user2)
-        
-        self.assertEqual(block.user, self.user1)
-        self.assertEqual(block.blocked_by, self.user2)
-        self.assertIsNotNone(block.id)
-        self.assertIsNotNone(block.created_at)
 
 
 class UserLikeTests(TestCase):

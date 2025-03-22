@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'user_auth',
     'card',
     'messaging',
-    'location'
+    'location',
+    'safety'
 ]
 
 MIDDLEWARE = [
