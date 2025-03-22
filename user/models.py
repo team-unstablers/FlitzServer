@@ -52,7 +52,7 @@ class User(AbstractUser):
         from location.models import UserLocation
 
         with transaction.atomic():
-            location = UserLocation.objects.get_or_create(
+            location, created = UserLocation.objects.get_or_create(
                 defaults={
                     'latitude': 0.0,
                     'longitude': 0.0,
