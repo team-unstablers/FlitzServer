@@ -5,7 +5,7 @@ from django.db import models, transaction
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
-from safety.utils.phone_number import hash_phone_number
+from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
 
 # Create your models here.
@@ -40,7 +40,10 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     def set_phone_number(self, phone_number: str):
-        self.phone_number_hashed = hash_phone_number(phone_number)
+        normalized_phone_number = normalize_phone_number(phone_number)
+
+        self.phone_number = normalized_phone_number
+        self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
     def send_push_message(self, title: str, body: str, data: Optional[dict]=None):
         """
