@@ -51,10 +51,46 @@ Flitz 앱은 **Bluetooth LE + GPS**를 사용하여 주변에 있는 Flitz 사�
 
 **Flitz 앱은 다른 사용자와 카드가 교환되었더라도, 곧바로 상대방의 카드를 표시하지 않습니다. 카드가 교환된 후 사용자에게 표시되려면 아래 조건을 만족해야 합니다.**
 
-- **서로가 같은 장소에서 벗어나야 함**
-    - TODO: 멀어진다의 개념이 좁아야 한다.
-- **서로가 멀어진 지 N시간 이상 경과해야 함**
-    - TODO: 생활권이 겹치는 사람은 멀어지지 않을 수 있다.
+> TODO: 인스턴트하지 않은, 슬로우한 카드 교환을 의도하고 있는데, 이대로도 괜찮을까요? 사용자가 질려할 수도 있을 것 같은데요.
+
+### soft condition
+
+이 조건을 **전부** 만족하면 사용자에게 카드가 표시됩니다.
+
+- 카드 교환 지점으로부터 2km 이상 멀어져야 함
+- 카드 교환 시점으로부터 2시간 이상 경과해야 함
+
+### hard condition
+
+soft condition을 만족할 수 없는 경우, 이 조건 중 하나를 만족하면 사용자에게 카드가 표시됩니다.
+
+- 카드 교환 지점으로부터 15km 이상 멀어져야 함
+- 카드 교환 시점으로부터 24시간 이상 경과해야 함
+
+### assertive condition
+
+사용자의 안전을 최우선으로 하기 위해, 이 조건을 만족하지 않으면 앞의 조건들이 만족하더라도 사용자에게 카드가 표시되지 않습니다.
+
+- opponent가 여전히 가까이 있으면 카드 표시하지 않음
+- opponent가 **차단/제한 목록**에 등록되어 있으면 카드 표시하지 않음
+- opponent가 **shadowban** 처리되어 있으면 카드 표시하지 않음
+
+## PHASED REVEAL
+
+- 첫 30분~1시간 이내에는 아예 표시가 안 되지만, 이후에는 (예: 1시간 후 + 1km 거리) 점진적으로 (blurry) 표시 가능.
+- 구현이 복잡해질 수 있지만, “만나자마자 바로 공개되지 않는다” + “너무 오래 기다리지도 않는다”는 중간 솔루션이 될 수 있음.
+
+phase = 0:
+    완전 블러 이미지, 혹은 “기본 실루엣 + 닉네임/태그만” 표기
+    예: 교환 직후 ~ 30분 (혹은 1시간) 이내
+
+phase = 1:
+    블러가 조금 줄어든 이미지, 혹은 “낮은 해상도” / “흐릿한 미리보기” 정도
+    예: 1시간 ~ 2시간 경과 시점
+
+phase = 2:
+    완전한 카드 정보 공개 (Delayed Exchange 최종 상태)
+    예: 2시간 이후 & 안전 거리(Soft Condition) 만족 시
 
 ---
 
@@ -233,5 +269,48 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 ## 환경 설정
 - 개발 환경: docker-compose 사용 (devenv/docker-compose.yaml)
 - MinIO, Redis 등의 서비스 포함
+
+## 테스트 작성
+
+### 테스트 유틸리티
+- 테스트 객체 생성을 위한 공통 유틸리티는 `flitz/test_utils.py`에 정의
+- 기본 객체 생성 함수:
+  - `create_test_user(index=1, **kwargs)`: 테스트 사용자 생성
+  - `create_test_session(user, **kwargs)`: 테스트 세션 생성
+  - `create_test_card(user, **kwargs)`: 테스트 카드 생성
+  - `create_test_user_location(user, **kwargs)`: 테스트 위치 정보 생성
+  - `create_test_discovery_session(user, is_active=True, **kwargs)`: 테스트 디스커버리 세션 생성
+- 복합 객체 생성 함수:
+  - `create_test_user_with_session(index=1, **kwargs)`: 세션이 있는 테스트 사용자 생성
+  - `create_test_user_with_card(index=1, set_as_main=True, **kwargs)`: 카드가 있는 테스트 사용자 생성
+  - `create_test_user_with_location(index=1, **kwargs)`: 위치 정보가 있는 테스트 사용자 생성
+  - `create_test_user_with_discovery_session(index=1, is_active=True, **kwargs)`: 디스커버리 세션이 있는 테스트 사용자 생성
+  - `create_complete_test_user(index=1, with_card=True, with_session=True, with_location=True, with_discovery=True, **kwargs)`: 모든 관련 객체를 포함한 테스트 사용자 생성
+
+### 테스트 유틸리티 사용 패턴
+- 각 앱의 테스트 파일에서 테스트 유틸리티 가져오기:
+  ```python
+  from flitz.test_utils import create_test_user, create_test_user_with_card, ...
+  ```
+- 테스트 케이스 내에서의 기본 사용법:
+  ```python
+  class YourTestCase(TestCase):
+      def setUp(self):
+          self.user1 = create_test_user(1)  # testuser1
+          self.user2 = create_test_user(2)  # testuser2
+          # 또는
+          test_objects = create_complete_test_user(with_card=True, with_session=True)
+          self.user = test_objects['user']
+          self.card = test_objects['card']
+          self.session = test_objects['session']
+  ```
+- 모든 함수는 `**kwargs`를 지원하여 필요한 경우 기본값을 오버라이드 가능
+- 로그인/회원가입/토큰 발급 테스트를 제외한 모든 테스트에서 이 유틸리티 사용 권장
+
+### 테스트 모범 사례
+- 각 테스트는 독립적으로 실행 가능해야 함
+- 테스트 간 상태 공유 지양 (각 테스트 케이스는 자체적으로 필요한 상태 설정)
+- 테스트 실행 속도를 위한 최소한의 객체만 생성 (예: 위치 테스트에 카드가 필요 없다면 생성하지 않음)
+- 동일한 테스트 객체를 여러 테스트에서 반복 생성 시 테스트 유틸리티 활용
 
 </section>

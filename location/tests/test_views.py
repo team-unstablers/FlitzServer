@@ -8,6 +8,11 @@ from user.models import User
 from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.views import FlitzWaveViewSet
 from card.models import Card
+from flitz.test_utils import (
+    create_test_user, create_test_card, 
+    create_test_user_location, create_test_discovery_session,
+    create_complete_test_user
+)
 
 
 class FlitzWaveViewSetTest(TestCase):
@@ -15,31 +20,18 @@ class FlitzWaveViewSetTest(TestCase):
         """
         테스트를 위한 기본 데이터 설정
         """
-        # 테스트 사용자 생성
-        self.user = User.objects.create_user(
-            username="testuser",
-            password="testpass123",
-            display_name="Test User"
+        # create_complete_test_user 함수를 사용하여 사용자, 카드, 위치 정보를 한 번에 생성
+        test_objects = create_complete_test_user(
+            1, 
+            with_card=True, 
+            with_session=False, 
+            with_location=True, 
+            with_discovery=False
         )
         
-        # 테스트 카드 생성 및 메인 카드로 설정
-        self.card = Card.objects.create(
-            user=self.user,
-            title="Test Card",
-            content={"test": "content"}
-        )
-        self.user.main_card = self.card
-        self.user.save()
-        
-        # 사용자 위치 정보 생성
-        UserLocation.objects.create(
-            user=self.user,
-            latitude=37.5665,
-            longitude=126.9780,
-            altitude=10.0,
-            accuracy=5.0,
-            timezone="Asia/Seoul"
-        )
+        self.user = test_objects['user']
+        self.card = test_objects['card']
+        self.location = test_objects['location']
         
         # API 클라이언트 설정
         self.client = APIClient()

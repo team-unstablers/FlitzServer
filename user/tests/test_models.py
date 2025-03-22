@@ -6,21 +6,14 @@ from unittest.mock import patch, MagicMock
 import unittest
 
 from user.models import UserBlock, UserLike, UserMatch, Notification
+from flitz.test_utils import create_test_user
 
 User = get_user_model()
 
 class UserModelTests(TestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            username='testuser1',
-            display_name='Test User 1',
-            password='testpassword1'
-        )
-        self.user2 = User.objects.create_user(
-            username='testuser2',
-            display_name='Test User 2',
-            password='testpassword2'
-        )
+        self.user1 = create_test_user(1)
+        self.user2 = create_test_user(2)
 
     def test_user_creation(self):
         """사용자 생성이 올바르게 이루어지는지 테스트"""
@@ -37,16 +30,8 @@ class UserModelTests(TestCase):
 
 class UserBlockTests(TestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            username='testuser1',
-            display_name='Test User 1',
-            password='testpassword1'
-        )
-        self.user2 = User.objects.create_user(
-            username='testuser2',
-            display_name='Test User 2',
-            password='testpassword2'
-        )
+        self.user1 = create_test_user(1)
+        self.user2 = create_test_user(2)
 
     def test_user_block_creation(self):
         """사용자 차단 관계 생성 테스트"""
@@ -60,16 +45,8 @@ class UserBlockTests(TestCase):
 
 class UserLikeTests(TestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            username='testuser1',
-            display_name='Test User 1',
-            password='testpassword1'
-        )
-        self.user2 = User.objects.create_user(
-            username='testuser2',
-            display_name='Test User 2',
-            password='testpassword2'
-        )
+        self.user1 = create_test_user(1)
+        self.user2 = create_test_user(2)
 
     def test_user_like_creation(self):
         """사용자 좋아요 관계 생성 테스트"""
@@ -117,16 +94,8 @@ class UserLikeTests(TestCase):
 
 class UserMatchTests(TestCase):
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            username='testuser1',
-            display_name='Test User 1',
-            password='testpassword1'
-        )
-        self.user2 = User.objects.create_user(
-            username='testuser2',
-            display_name='Test User 2',
-            password='testpassword2'
-        )
+        self.user1 = create_test_user(1)
+        self.user2 = create_test_user(2)
 
     @patch('user.tasks.send_push_message.delay_on_commit')
     @patch('messaging.models.DirectMessageConversation.create_conversation')
@@ -153,11 +122,7 @@ class UserMatchTests(TestCase):
 
 class NotificationTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser1',
-            display_name='Test User 1',
-            password='testpassword1'
-        )
+        self.user = create_test_user(1)
 
     def test_notification_creation(self):
         """알림 생성 테스트"""
