@@ -21,6 +21,7 @@ flower = "^2.0.1"
 pytz = "^2024.2"
 timezonefinder = "^6.5.8"
 freezegun = "^1.5.1"
+haversine = "^2.9.0"
 
 
 [tool.poetry.group.dev.dependencies]
