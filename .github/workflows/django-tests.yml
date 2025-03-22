@@ -1,0 +1,85 @@
+name: Django Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7.4.2
+        ports:
+          - 6380:6379
+      
+      minio:
+        image: bitnami/minio:latest
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ROOT_USER: flitzdev
+          MINIO_ROOT_PASSWORD: flitzdev123
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.8.2
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Configure MinIO
+      run: |
+        pip install minio-cli
+        # 여러 번 시도하여 MinIO 연결 안정성 확보
+        for i in {1..5}; do
+          if mc config host add myminio http://localhost:9000 flitzdev flitzdev123; then
+            break
+          fi
+          echo "Attempt $i failed. Retrying in 5 seconds..."
+          sleep 5
+        done
+        
+        # 버킷 생성 및 권한 설정
+        mc mb myminio/flitz --ignore-existing || echo "Bucket flitz already exists or creation failed"
+        mc mb myminio/flitz-server-static --ignore-existing || echo "Bucket flitz-server-static already exists or creation failed"
+        mc anonymous set download myminio/flitz || echo "Setting anonymous access for flitz failed"
+        mc anonymous set download myminio/flitz-server-static || echo "Setting anonymous access for flitz-server-static failed"
+    
+    - name: Run tests
+      run: |
+        # 테스트 실행 전 환경 확인
+        echo "Running tests with Python $(poetry run python --version)"
+        echo "Django version: $(poetry run python -c 'import django; print(django.__version__)')"
+        
+        # 테스트 실행 (자세한 출력 옵션 추가)
+        poetry run python manage.py test --verbosity=2
+      env:
+        CELERY_BROKER_URL: redis://localhost:6380/0
+        CELERY_RESULT_BACKEND: redis://localhost:6380/0
+        # 테스트 환경임을 명시
+        DJANGO_SETTINGS_MODULE: flitz.settings
+        PYTHONUNBUFFERED: 1
