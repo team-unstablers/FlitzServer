@@ -196,3 +196,48 @@ class UserContactsTriggerTests(TestCase):
             
             # Verify no block was created due to transaction rollback
             self.assertEqual(UserBlock.objects.count(), 0)
+    
+    def test_delete_trigger_deletes_related_block(self):
+        """UserContactsTrigger 삭제 시 연결된 UserBlock도 함께 삭제되는지 테스트"""
+        # 트리거 생성 및 차단 수행
+        trigger = UserContactsTrigger.objects.create(
+            user=self.user1,
+            phone_number_hashed=self.expected_hash
+        )
+        trigger.perform_block()
+        
+        # 관련 객체 확인
+        trigger.refresh_from_db()
+        related_block_id = trigger.related_object.id
+        self.assertIsNotNone(trigger.related_object)
+        self.assertEqual(UserBlock.objects.count(), 1)
+        
+        # 트리거 삭제
+        trigger.delete()
+        
+        # 연결된 UserBlock도 함께 삭제되었는지 확인
+        self.assertEqual(UserBlock.objects.count(), 0)
+        self.assertFalse(UserBlock.objects.filter(id=related_block_id).exists())
+    
+    def test_delete_block_does_not_delete_trigger(self):
+        """UserBlock 삭제 시 연결된 UserContactsTrigger는 삭제되지 않는지 테스트"""
+        # 트리거 생성 및 차단 수행
+        trigger = UserContactsTrigger.objects.create(
+            user=self.user1,
+            phone_number_hashed=self.expected_hash
+        )
+        trigger.perform_block()
+        
+        # 관련 객체 확인
+        trigger.refresh_from_db()
+        related_block = trigger.related_object
+        trigger_id = trigger.id
+        self.assertIsNotNone(related_block)
+        
+        # UserBlock 삭제
+        related_block.delete()
+        
+        # 트리거는 여전히 존재하는지 확인 (related_object만 NULL로 설정됨)
+        self.assertTrue(UserContactsTrigger.objects.filter(id=trigger_id).exists())
+        trigger.refresh_from_db()
+        self.assertIsNone(trigger.related_object)

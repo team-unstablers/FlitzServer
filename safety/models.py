@@ -1,7 +1,8 @@
-from idlelib.pyparse import trans
 from typing import Optional
 
 from django.db import models, transaction
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 from flitz.models import BaseModel
 from safety.utils.phone_number import hash_phone_number, normalize_phone_number
@@ -74,5 +75,16 @@ class UserContactsTrigger(BaseModel):
             self.save()
 
 
-
-
+@receiver(pre_delete, sender=UserContactsTrigger)
+def delete_related_userblock(sender, instance, **kwargs):
+    """
+    UserContactsTrigger가 삭제될 때 연결된 UserBlock 객체도 함께 삭제합니다.
+    반대의 경우(UserBlock이 삭제될 때 UserContactsTrigger가 삭제되는 것)는 발생하지 않습니다.
+    """
+    if instance.related_object:
+        # SET_NULL 동작을 막기 위해 참조를 제거
+        related_object = instance.related_object
+        instance.related_object = None
+        instance.save(update_fields=['related_object'])
+        # 연결된 UserBlock 삭제
+        related_object.delete()
