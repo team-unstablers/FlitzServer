@@ -754,6 +754,18 @@ numpy = ["numpy"]
 test = ["numpy", "pytest", "pytest-cov", "ruff"]
 
 [[package]]
+name = "haversine"
+version = "2.9.0"
+description = "Calculate the distance between 2 points on Earth."
+optional = false
+python-versions = ">=3.5"
+groups = ["main"]
+files = [
+    {file = "haversine-2.9.0-py2.py3-none-any.whl", hash = "sha256:d32031b6b4232e37764730a781a3b8cb248710f92aca6f553b8097524420754d"},
+    {file = "haversine-2.9.0.tar.gz", hash = "sha256:1103d7e1f0f108c25b31b63452c54d9d6f29389a70de7dd75fd4b908329b6fcf"},
+]
+
+[[package]]
 name = "hpack"
 version = "4.0.0"
 description = "Pure-Python HPACK header compression"
@@ -1449,4 +1461,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "ddd363684fb8c79e3bbeb6aedf1439826f35f152e5b454acea411edb6c661338"
+content-hash = "381a654210e9d38cb8428866545c5e63a8d2e0bde8886cbf63bf935f2b9dc6ee"
