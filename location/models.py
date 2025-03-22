@@ -24,7 +24,7 @@ class UserLocation(models.Model, LocationDistanceMixin):
     class Meta:
         get_latest_by = 'created_at'
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True, related_name='location')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='location')
 
     latitude = models.FloatField(null=False, blank=False)
     longitude = models.FloatField(null=False, blank=False)
