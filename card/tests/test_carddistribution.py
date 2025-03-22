@@ -4,8 +4,6 @@ from datetime import timedelta
 from unittest.mock import patch, MagicMock
 
 from card.models import CardDistribution, Card
-from user.models import User, UserBlock
-from location.models import UserLocation
 from flitz.test_utils import (
     create_test_user, create_test_card, 
     create_test_user_location, create_complete_test_user
