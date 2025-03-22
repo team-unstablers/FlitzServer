@@ -270,4 +270,47 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 - 개발 환경: docker-compose 사용 (devenv/docker-compose.yaml)
 - MinIO, Redis 등의 서비스 포함
 
+## 테스트 작성
+
+### 테스트 유틸리티
+- 테스트 객체 생성을 위한 공통 유틸리티는 `flitz/test_utils.py`에 정의
+- 기본 객체 생성 함수:
+  - `create_test_user(index=1, **kwargs)`: 테스트 사용자 생성
+  - `create_test_session(user, **kwargs)`: 테스트 세션 생성
+  - `create_test_card(user, **kwargs)`: 테스트 카드 생성
+  - `create_test_user_location(user, **kwargs)`: 테스트 위치 정보 생성
+  - `create_test_discovery_session(user, is_active=True, **kwargs)`: 테스트 디스커버리 세션 생성
+- 복합 객체 생성 함수:
+  - `create_test_user_with_session(index=1, **kwargs)`: 세션이 있는 테스트 사용자 생성
+  - `create_test_user_with_card(index=1, set_as_main=True, **kwargs)`: 카드가 있는 테스트 사용자 생성
+  - `create_test_user_with_location(index=1, **kwargs)`: 위치 정보가 있는 테스트 사용자 생성
+  - `create_test_user_with_discovery_session(index=1, is_active=True, **kwargs)`: 디스커버리 세션이 있는 테스트 사용자 생성
+  - `create_complete_test_user(index=1, with_card=True, with_session=True, with_location=True, with_discovery=True, **kwargs)`: 모든 관련 객체를 포함한 테스트 사용자 생성
+
+### 테스트 유틸리티 사용 패턴
+- 각 앱의 테스트 파일에서 테스트 유틸리티 가져오기:
+  ```python
+  from flitz.test_utils import create_test_user, create_test_user_with_card, ...
+  ```
+- 테스트 케이스 내에서의 기본 사용법:
+  ```python
+  class YourTestCase(TestCase):
+      def setUp(self):
+          self.user1 = create_test_user(1)  # testuser1
+          self.user2 = create_test_user(2)  # testuser2
+          # 또는
+          test_objects = create_complete_test_user(with_card=True, with_session=True)
+          self.user = test_objects['user']
+          self.card = test_objects['card']
+          self.session = test_objects['session']
+  ```
+- 모든 함수는 `**kwargs`를 지원하여 필요한 경우 기본값을 오버라이드 가능
+- 로그인/회원가입/토큰 발급 테스트를 제외한 모든 테스트에서 이 유틸리티 사용 권장
+
+### 테스트 모범 사례
+- 각 테스트는 독립적으로 실행 가능해야 함
+- 테스트 간 상태 공유 지양 (각 테스트 케이스는 자체적으로 필요한 상태 설정)
+- 테스트 실행 속도를 위한 최소한의 객체만 생성 (예: 위치 테스트에 카드가 필요 없다면 생성하지 않음)
+- 동일한 테스트 객체를 여러 테스트에서 반복 생성 시 테스트 유틸리티 활용
+
 </section>
