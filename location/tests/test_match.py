@@ -1,17 +1,14 @@
 from django.test import TransactionTestCase
 from django.utils import timezone
-from django.db import transaction
 from freezegun import freeze_time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytz
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from user.models import User
 from card.models import Card, CardDistribution
 from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.match import UserMatcher
-from location.utils import get_today_start_in_timezone
 
 
 class UserMatcherTest(TransactionTestCase):

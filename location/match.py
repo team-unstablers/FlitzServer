@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from card.models import CardDistribution
 from location.models import DiscoverySession, DiscoveryHistory
-from location.utils import get_today_start_in_timezone
+from location.utils.timezone import get_today_start_in_timezone
 from user.models import User
 
 

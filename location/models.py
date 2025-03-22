@@ -1,11 +1,13 @@
 import pytz
 from django.db import models
 
-from flitz.models import UUIDv7Field, BaseModel
+from flitz.models import BaseModel
 
 from user.models import User
 
-from location.utils import get_timezone_from_coordinates, get_today_start_in_timezone
+from location.utils.timezone import get_timezone_from_coordinates
+from location.utils.distance import measure_distance
+
 
 # Create your models here.
 
@@ -32,6 +34,15 @@ class UserLocation(models.Model):
     @property
     def timezone_obj(self) -> pytz.timezone:
         return pytz.timezone(self.timezone)
+
+    def __sub__(self, other) -> float:
+        """
+        두 위치 정보 사이의 거리를 계산합니다. 킬로미터 단위입니다.
+        """
+        loc1 = (self.latitude, self.longitude)
+        loc2 = (other.latitude, other.longitude)
+
+        return measure_distance(loc1, loc2)
 
 
 class DiscoverySession(BaseModel):
