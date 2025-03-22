@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from django.db import transaction
 
 from safety.models import UserBlock, UserContactsTrigger
-from safety.utils.phone_number import hash_phone_number
+from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 from flitz.test_utils import create_test_user
 
 # Test salt for phone number hashing
@@ -73,7 +73,7 @@ class UserContactsTriggerTests(TestCase):
         
         # Create expected hash for testing
         self.test_phone_number = "+82-10-1234-5678"
-        self.expected_hash = hash_phone_number(self.test_phone_number)
+        self.expected_hash = hash_phone_number(normalize_phone_number(self.test_phone_number))
         
         # Verify the user2 has the same hash
         self.user2.phone_number_hashed = self.expected_hash
