@@ -2,16 +2,8 @@ from typing import TypedDict, Optional
 
 import json
 
-from datetime import datetime, timedelta, timezone
-
-import jwt
-
 from django.http import HttpResponse
-from django.conf import settings
-from django.shortcuts import render
 from django.http.request import HttpRequest
-
-from flitz.exceptions import UnsupportedOperationException
 
 from user.models import User
 
@@ -45,12 +37,7 @@ def request_token(request: HttpRequest):
         )
 
         # create token
-        token = jwt.encode({
-            'sub': str(session.id),
-            'iat': datetime.now(tz=timezone.utc),
-            'exp': datetime.now(tz=timezone.utc) + timedelta(days=30),
-            'x-flitz-options': '--with-love',
-        }, key=settings.SECRET_KEY, algorithm='HS256')
+        token = session.create_token()
 
         response_json = json.dumps({
             'token': token

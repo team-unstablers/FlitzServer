@@ -1,4 +1,10 @@
+from datetime import timedelta
+
+import jwt
+
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
 
 from flitz.models import BaseModel
 from flitz.apns import APNS
@@ -24,3 +30,13 @@ class UserSession(BaseModel):
 
         apns = APNS.default()
         apns.send_notification(title, body, [self.apns_token], data)
+
+    def create_token(self) -> str:
+        token = jwt.encode({
+            'sub': str(self.id),
+            'iat': timezone.now(),
+            'exp': timezone.now() + timedelta(days=30),
+            'x-flitz-options': '--with-love',
+        }, key=settings.SECRET_KEY, algorithm='HS256')
+
+        return token
