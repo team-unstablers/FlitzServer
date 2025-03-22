@@ -26,7 +26,8 @@ class UserLocation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def update_timezone(self):
-        self.timezone = get_timezone_from_coordinates(self.latitude, self.longitude)
+        timezone_obj = get_timezone_from_coordinates(self.latitude, self.longitude)
+        self.timezone = str(timezone_obj)
 
     @property
     def timezone_obj(self) -> pytz.timezone:
