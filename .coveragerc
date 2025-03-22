@@ -1,0 +1,19 @@
+[run]
+source = .
+omit = 
+    */migrations/*
+    */tests/*
+    */tests.py
+    manage.py
+    flitz/settings.py
+    flitz/asgi.py
+    flitz/wsgi.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if settings.DEBUG
+    pass
+    raise ImportError

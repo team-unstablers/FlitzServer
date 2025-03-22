@@ -23,6 +23,9 @@ timezonefinder = "^6.5.8"
 freezegun = "^1.5.1"
 
 
+[tool.poetry.group.dev.dependencies]
+coverage = "^7.7.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
