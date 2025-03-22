@@ -1,5 +1,16 @@
 from rest_framework import serializers
-from location.models import DiscoverySession
+
+class UpdateLocationSerializer(serializers.Serializer):
+    """
+    사용자의 위치 정보를 업데이트하기 위한 Serializer
+    """
+    session_id = serializers.UUIDField(required=True)
+
+    latitude = serializers.FloatField(required=True)
+    longitude = serializers.FloatField(required=True)
+    altitude = serializers.FloatField(required=False, allow_null=True)
+
+    accuracy = serializers.FloatField(required=False, allow_null=True)
 
 class DiscoveryReportSerializer(serializers.Serializer):
     """
