@@ -5,6 +5,8 @@ from django.db import models, transaction
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
+from safety.utils.phonehash import hash_phone_number
+
 
 # Create your models here.
 
@@ -18,6 +20,9 @@ class User(AbstractUser):
 
     username = models.CharField(max_length=24, unique=True)
     display_name = models.CharField(max_length=24)
+
+    phone_number = models.CharField(max_length=32, null=True, blank=True)
+    phone_number_hashed = models.CharField(max_length=64, null=True, blank=True)
 
     disabled_at = models.DateTimeField(null=True, blank=True)
 
@@ -33,6 +38,9 @@ class User(AbstractUser):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def set_phone_number(self, phone_number: str):
+        self.phone_number_hashed = hash_phone_number(phone_number)
 
     def send_push_message(self, title: str, body: str, data: Optional[dict]=None):
         """
@@ -73,9 +81,6 @@ class User(AbstractUser):
         return location
 
 
-class UserBlock(BaseModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    blocked_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blocked_users')
 
 class UserLike(BaseModel):
     class Meta:
