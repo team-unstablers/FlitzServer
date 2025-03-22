@@ -20,6 +20,7 @@ class MessagingObjdefTestCase(TestCase):
 
         attachment_content_dict = {
             "type": "attachment",
+            "attachment_type": "image",
             "attachment_id": "1234-1234-1234"
         }
 
@@ -27,6 +28,7 @@ class MessagingObjdefTestCase(TestCase):
 
         self.assertIsInstance(attachment_content, DirectMessageContent)
         self.assertEqual(attachment_content.type, "attachment")
+        self.assertEqual(attachment_content.attachment_type, "image")
         self.assertEqual(attachment_content.attachment_id, "1234-1234-1234")
 
 
