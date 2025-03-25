@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+LOCALHOST = "cheese-mbpr14.local"
+
 
 # Application definition
 
@@ -161,7 +163,7 @@ STORAGES = {
             "bucket_name": "flitz-server-static",
             "access_key": "flitzdev",
             "secret_key": "flitzdev123",
-            "endpoint_url": "http://cheese-mbpr14.local:9000"
+            "endpoint_url": f"http://{LOCALHOST}:9000"
         }
     },
     "default": {
@@ -170,7 +172,7 @@ STORAGES = {
             "bucket_name": "flitz",
             "access_key": "flitzdev",
             "secret_key": "flitzdev123",
-            "endpoint_url": "http://cheese-mbpr14.local:9000",
+            "endpoint_url": f"http://{LOCALHOST}:9000",
             "object_parameters": {
                 "ACL": "public-read"
             },
