@@ -3,7 +3,7 @@ name = "flitzserver"
 version = "0.1.0"
 description = ""
 authors = ["Gyuhwan Park★ <unstabler@unstabler.pl>"]
-readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
