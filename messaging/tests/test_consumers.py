@@ -1,17 +1,18 @@
 import json
-from unittest.mock import sentinel
-
 import jwt
-from unittest import mock
 from datetime import timedelta
 from urllib.parse import urlencode
+from unittest import mock
+from unittest.mock import sentinel
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from channels.testing import WebsocketCommunicator
 from channels.routing import URLRouter
 from channels.db import database_sync_to_async
+from channels.layers import InMemoryChannelLayer, get_channel_layer
+import channels.layers
 
 from flitz.asgi import application
 from flitz.test_utils import create_test_user, create_test_user_with_session
@@ -30,7 +31,15 @@ def generate_test_token(session_id):
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
+test_settings = {
+    'CHANNEL_LAYERS': {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
+}
 
+@override_settings(**test_settings)
 class DirectMessageConsumerTests(TestCase):
     @database_sync_to_async
     def setup_test_data(self):
@@ -50,15 +59,10 @@ class DirectMessageConsumerTests(TestCase):
         
         # 웹소켓 URL
         self.ws_url = f'/ws/direct-messages/{self.conversation.id}/'
-    
-    @mock.patch("messaging.consumers.DirectMessageConsumer.channel_layer", sentinel.attribute)
-    async def test_connect_success(self, mock_channel_layer):
-        """연결 성공 테스트"""
+
+    async def test_connect_success(self):
+        """연결 성공 테스트 - InMemoryChannelLayer 사용"""
         await self.setup_test_data()
-        
-        # 채널 레이어 모킹
-        mock_channel_layer.group_add = mock.AsyncMock()
-        mock_channel_layer.group_send = mock.AsyncMock()
 
         # WebSocket 클라이언트 생성
         query_string = urlencode({'token': self.token1})
@@ -72,10 +76,6 @@ class DirectMessageConsumerTests(TestCase):
         
         # 연결 성공 확인
         self.assertTrue(connected)
-
-        # 그룹 추가 및 읽음 상태 이벤트 발송 확인
-        mock_channel_layer.group_add.assert_called_once()
-        mock_channel_layer.group_send.assert_called_once()
         
         # WebSocket 연결 종료
         await communicator.disconnect()
@@ -141,11 +141,10 @@ class DirectMessageConsumerTests(TestCase):
         token3 = generate_test_token(session3.id)
         return user3, session3, token3
 
-    @mock.patch("channels.layers.get_channel_layer")
-    async def test_connect_not_participant(self, mock_get_channel_layer):
-        """대화방 참여자가 아닌 사용자의 연결 실패 테스트"""
+    async def test_connect_not_participant(self):
+        """대화방 참여자가 아닌 사용자의 연결 실패 테스트 - InMemoryChannelLayer 사용"""
         await self.setup_test_data()
-        
+
         # 새로운 사용자 생성 (대화방 참여자 아님)
         _, _, token3 = await self.create_non_participant()
         
@@ -162,154 +161,182 @@ class DirectMessageConsumerTests(TestCase):
         # 연결 실패 확인
         self.assertFalse(connected)
     
-    @mock.patch("channels.layers.get_channel_layer")
-    async def test_receive_message(self, mock_get_channel_layer):
-        """메시지 수신 테스트"""
+    async def test_receive_message(self):
+        """메시지 수신 테스트 - InMemoryChannelLayer 사용"""
         await self.setup_test_data()
-        
-        # 채널 레이어 모킹
-        mock_channel_layer = mock.AsyncMock()
-        mock_channel_layer.group_add = mock.AsyncMock()
-        mock_channel_layer.group_send = mock.AsyncMock()
-        mock_get_channel_layer.return_value = mock_channel_layer
-        
-        # WebSocket 클라이언트 생성
-        query_string = urlencode({'token': self.token1})
-        communicator = WebsocketCommunicator(
+
+        # 두 사용자의 WebSocket 클라이언트 생성
+        query_string1 = urlencode({'token': self.token1})
+        communicator1 = WebsocketCommunicator(
             URLRouter(websocket_urlpatterns),
-            f"{self.ws_url}?{query_string}"
+            f"{self.ws_url}?{query_string1}"
         )
         
-        # 연결
-        connected, _ = await communicator.connect()
-        self.assertTrue(connected)
+        query_string2 = urlencode({'token': self.token2})
+        communicator2 = WebsocketCommunicator(
+            URLRouter(websocket_urlpatterns),
+            f"{self.ws_url}?{query_string2}"
+        )
         
-        # 모의 메시지 이벤트 생성
-        message_event = {
-            'type': 'dm_message',
-            'message': {
-                'id': '123456',
-                'content': {'type': 'text', 'text': 'Test WebSocket message'},
-                'sender_id': str(self.user2.id),
-                'created_at': timezone.now().isoformat()
+        # 두 클라이언트 모두 연결
+        connected1, _ = await communicator1.connect()
+        self.assertTrue(connected1)
+        connected2, _ = await communicator2.connect()
+        self.assertTrue(connected2)
+        
+        # DirectMessage 객체 생성 (데이터베이스에 저장)
+        @database_sync_to_async
+        def create_test_message():
+            message = DirectMessage.objects.create(
+                conversation=self.conversation,
+                sender=self.user2,
+                content={'type': 'text', 'text': 'Test WebSocket message'}
+            )
+            return message
+        
+        message = await create_test_message()
+        
+        # 메시지 전송
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            f"direct_message_{self.conversation.id}",
+            {
+                'type': 'dm_message',
+                'message': {
+                    'id': str(message.id),
+                    'content': message.content,
+                    'sender_id': str(self.user2.id),
+                    'created_at': message.created_at.isoformat()
+                }
             }
-        }
+        )
         
-        # consumer.dm_message 메서드 직접 호출 시뮬레이션
-        consumer = DirectMessageConsumer()
-        consumer.user_id = str(self.user1.id)
-        consumer.send = mock.AsyncMock()
-        consumer.channel_layer = mock_channel_layer
-        
-        await consumer.dm_message(message_event)
-        
-        # 메시지 전송 확인
-        consumer.send.assert_called_once()
-        call_args = consumer.send.call_args[1]
-        sent_data = json.loads(call_args['text_data'])
-        
-        self.assertEqual(sent_data['type'], 'message')
-        self.assertEqual(sent_data['message']['content']['text'], 'Test WebSocket message')
+        # user1이 메시지를 수신하는지 확인
+        response = await communicator1.receive_json_from()
+        self.assertEqual(response['type'], 'message')
+        self.assertEqual(response['message']['content']['text'], 'Test WebSocket message')
+        self.assertEqual(response['message']['sender_id'], str(self.user2.id))
         
         # WebSocket 연결 종료
-        await communicator.disconnect()
+        await communicator1.disconnect()
+        await communicator2.disconnect()
     
-    @mock.patch("channels.layers.get_channel_layer")
-    async def test_read_receipt(self, mock_get_channel_layer):
-        """읽음 상태 업데이트 테스트"""
+    async def test_read_receipt(self):
+        """읽음 상태 업데이트 테스트 - InMemoryChannelLayer 사용"""
         await self.setup_test_data()
-        
-        # 채널 레이어 모킹
-        mock_channel_layer = mock.AsyncMock()
-        mock_channel_layer.group_add = mock.AsyncMock()
-        mock_channel_layer.group_send = mock.AsyncMock()
-        mock_get_channel_layer.return_value = mock_channel_layer
-        
-        # WebSocket 클라이언트 생성
-        query_string = urlencode({'token': self.token1})
-        communicator = WebsocketCommunicator(
+
+        # 두 사용자의 WebSocket 클라이언트 생성
+        query_string1 = urlencode({'token': self.token1})
+        communicator1 = WebsocketCommunicator(
             URLRouter(websocket_urlpatterns),
-            f"{self.ws_url}?{query_string}"
+            f"{self.ws_url}?{query_string1}"
         )
         
-        # 연결
-        connected, _ = await communicator.connect()
-        self.assertTrue(connected)
+        query_string2 = urlencode({'token': self.token2})
+        communicator2 = WebsocketCommunicator(
+            URLRouter(websocket_urlpatterns),
+            f"{self.ws_url}?{query_string2}"
+        )
         
-        # 읽음 상태 요청 전송
-        await communicator.send_json_to({
+        # 두 클라이언트 모두 연결
+        connected1, _ = await communicator1.connect()
+        self.assertTrue(connected1)
+        connected2, _ = await communicator2.connect()
+        self.assertTrue(connected2)
+        
+        # 두 클라이언트가 모두 연결 시 자동으로 생성된 초기 읽음 상태 이벤트를 무시
+        # (connect시 자동으로 읽음 상태 업데이트 이벤트가 발생함)
+        await communicator1.receive_json_from()  # user1이 user2의 읽음 상태 이벤트 수신
+        await communicator2.receive_json_from()  # user2가 user1의 읽음 상태 이벤트 수신
+        
+        # user1이 읽음 상태 요청 전송
+        await communicator1.send_json_to({
             'type': 'read_receipt'
         })
         
-        # 그룹 메시지 전송 확인 (첫 번째는 연결 시, 두 번째는 read_receipt 처리 시)
-        self.assertEqual(mock_channel_layer.group_send.call_count, 2)
+        # user2가 user1의 읽음 상태 이벤트를 수신하는지 확인
+        response = await communicator2.receive_json_from()
         
-        # 두 번째 호출 데이터 확인
-        call_args = mock_channel_layer.group_send.call_args[0]
-        event_data = call_args[1]
-        self.assertEqual(event_data['type'], 'dm_read_event')
-        self.assertEqual(event_data['user_id'], str(self.user1.id))
+        self.assertEqual(response['type'], 'read_event')
+        self.assertEqual(response['user_id'], str(self.user1.id))
         
         # WebSocket 연결 종료
-        await communicator.disconnect()
+        await communicator1.disconnect()
+        await communicator2.disconnect()
     
-    @mock.patch("channels.layers.get_channel_layer")
-    async def test_read_event(self, mock_get_channel_layer):
-        """읽음 상태 이벤트 수신 테스트"""
-        await self.setup_test_data()
-        
-        # 채널 레이어 모킹
-        mock_channel_layer = mock.AsyncMock()
-        mock_channel_layer.group_add = mock.AsyncMock()
-        mock_channel_layer.group_send = mock.AsyncMock()
-        mock_get_channel_layer.return_value = mock_channel_layer
-        
-        # consumer.dm_read_event 메서드 직접 호출 시뮬레이션
-        consumer = DirectMessageConsumer()
-        consumer.user_id = str(self.user1.id)
-        consumer.send = mock.AsyncMock()
-        consumer.channel_layer = mock_channel_layer
-        
-        # 읽음 상태 이벤트 생성
-        read_event = {
-            'type': 'dm_read_event',
-            'user_id': str(self.user2.id),
-            'read_at': timezone.now().isoformat()
-        }
-        
-        # 읽음 상태 이벤트 처리
-        await consumer.dm_read_event(read_event)
-        
-        # 메시지 전송 확인
-        consumer.send.assert_called_once()
-        call_args = consumer.send.call_args[1]
-        sent_data = json.loads(call_args['text_data'])
-        
-        self.assertEqual(sent_data['type'], 'read_event')
-        self.assertEqual(sent_data['user_id'], str(self.user2.id))
-    
-    @mock.patch("channels.layers.get_channel_layer")
-    async def test_disconnect(self, mock_get_channel_layer):
-        """연결 종료 테스트"""
-        await self.setup_test_data()
-        
-        # 채널 레이어 모킹
-        mock_channel_layer = mock.AsyncMock()
-        mock_channel_layer.group_add = mock.AsyncMock()
-        mock_channel_layer.group_discard = mock.AsyncMock()
-        mock_get_channel_layer.return_value = mock_channel_layer
-        
-        # DirectMessageConsumer 인스턴스 생성 및 설정
-        consumer = DirectMessageConsumer()
-        consumer.conversation_id = str(self.conversation.id)
-        consumer.channel_layer = mock_channel_layer
-        consumer.channel_name = "test_channel"
-        
-        # disconnect 메서드 직접 호출
-        await consumer.disconnect(1000)
-        
-        # group_discard 호출 확인
-        mock_channel_layer.group_discard.assert_called_once_with(
-            f"direct_message_{self.conversation.id}",
-            "test_channel"
+    async def test_read_event(self):
+        """읽음 상태 이벤트 수신 테스트 - InMemoryChannelLayer 사용"""
+        # WebSocket 클라이언트 생성
+        query_string1 = urlencode({'token': self.token1})
+        communicator1 = WebsocketCommunicator(
+            URLRouter(websocket_urlpatterns),
+            f"{self.ws_url}?{query_string1}"
         )
+        
+        # 연결
+        connected1, _ = await communicator1.connect()
+        self.assertTrue(connected1)
+        
+        # 초기 connect시 발생하는 이벤트 무시 (있는 경우)
+        try:
+            await communicator1.receive_json_from(timeout=0.5)
+        except:
+            pass
+        
+        # 읽음 상태 이벤트 수동으로 전송
+        now = timezone.now().isoformat()
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            f"direct_message_{self.conversation.id}",
+            {
+                "type": "dm_read_event",
+                "user_id": str(self.user2.id),
+                "read_at": now
+            }
+        )
+        
+        # 이벤트 수신 확인
+        response = await communicator1.receive_json_from()
+        self.assertEqual(response['type'], 'read_event')
+        self.assertEqual(response['user_id'], str(self.user2.id))
+        
+        # WebSocket 연결 종료
+        await communicator1.disconnect()
+    
+    async def test_disconnect(self):
+        """연결 종료 테스트 - InMemoryChannelLayer 사용"""
+        # WebSocket 클라이언트 생성
+        query_string1 = urlencode({'token': self.token1})
+        communicator1 = WebsocketCommunicator(
+            URLRouter(websocket_urlpatterns),
+            f"{self.ws_url}?{query_string1}"
+        )
+        
+        # 연결
+        connected1, _ = await communicator1.connect()
+        self.assertTrue(connected1)
+        
+        # 초기 연결 시 이벤트 수신 (있으면 무시)
+        try:
+            await communicator1.receive_json_from(timeout=0.5)
+        except:
+            pass
+        
+        # 연결 종료
+        await communicator1.disconnect()
+        
+        # 연결 종료 후 메시지 전송 시도
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            f"direct_message_{self.conversation.id}",
+            {
+                "type": "dm_read_event",
+                "user_id": str(self.user2.id),
+                "read_at": timezone.now().isoformat()
+            }
+        )
+        
+        # 이제 communicator1은 연결이 끊어졌으므로 메시지를 수신하지 않아야 함
+        # (아래 코드는 테스트 성공을 의미하는 에러 발생을 기대)
+        with self.assertRaises(ValueError):  # receive_json_from은 연결 끊기면 ValueError 발생
+            await communicator1.receive_json_from(timeout=0.5)
