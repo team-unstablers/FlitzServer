@@ -24,6 +24,7 @@ freezegun = "^1.5.1"
 haversine = "^2.9.0"
 phonenumbers = "^9.0.1"
 channels = {extras = ["daphne"], version = "^4.2.0"}
+channels-redis = "^4.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
