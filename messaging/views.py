@@ -232,7 +232,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 type='attachment',
 
                 attachment_type='image',
-                attachment_id=attachment.id,
+                attachment_id=str(attachment.id),  # UUID를 문자열로 변환
 
                 # 굳이 원본을 보여줄 필요는 없음
                 public_url=attachment.thumbnail_url,

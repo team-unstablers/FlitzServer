@@ -197,7 +197,7 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
         self.client.force_authenticate(user=self.user1)
     
     @mock.patch('messaging.views.generate_thumbnail')
-    @mock.patch('django.core.files.storage.default_storage')
+    @mock.patch('messaging.views.default_storage')
     @mock.patch('messaging.views.get_channel_layer')
     @mock.patch('messaging.views.async_to_sync')
     def test_upload_attachment(self, mock_async_to_sync, mock_get_channel_layer, 
@@ -209,20 +209,21 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
         mock_group_send = mock.MagicMock()
         mock_async_to_sync.return_value = mock_group_send
         
-        # 스토리지 모킹
-        mock_storage = mock.MagicMock()
-        mock_default_storage.return_value = mock_storage
-        mock_default_storage.save = mock.MagicMock(return_value='test_path')
-        mock_default_storage.url = mock.MagicMock(return_value='http://test-url/image.jpg')
+        # 스토리지 모킹 설정
+        mock_default_storage.save.return_value = 'saved_path'
+        mock_default_storage.url.return_value = 'http://test-url/image.jpg'
         
-        # 썸네일 생성 모킹
-        mock_generate_thumbnail.return_value = mock.MagicMock()
+        # 썸네일 생성 모킹 - 실제 파일 객체 반환
+        from io import BytesIO
+        from django.core.files.base import ContentFile
+        thumbnail_content = BytesIO(b'fake thumbnail content')
+        mock_generate_thumbnail.return_value = ContentFile(thumbnail_content.getvalue(), name='thumbnail.jpg')
         
         # 테스트 이미지 파일 생성
         from django.core.files.uploadedfile import SimpleUploadedFile
         test_image = SimpleUploadedFile(
             name='test_image.jpg',
-            content=b'',
+            content=b'fake image content',
             content_type='image/jpeg'
         )
         
