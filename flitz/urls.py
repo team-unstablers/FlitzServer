@@ -17,8 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
-from rest_framework import routers
+from rest_framework import routers, permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
 from messaging.views import DirectMessageConversationViewSet, DirectMessageViewSet, DirectMessageAttachmentViewSet
 from user.views import PublicUserViewSet
@@ -28,6 +31,19 @@ from card.views import PublicCardViewSet, ReceivedCardViewSet, CardDistributionV
 
 from location.views import FlitzWaveViewSet
 from safety.views import UserBlockViewSet
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Flitz API",
+        default_version='v1',
+        description="Flitz - 남성 동성애자를 위한 데이팅 앱 서비스 API",
+        terms_of_service="https://www.flitz.app/terms/",
+        contact=openapi.Contact(email="support@flitz.app"),
+        license=openapi.License(name="BSD License"),
+    ),
+    public=True,
+    permission_classes=[permissions.AllowAny],
+)
 
 router = routers.DefaultRouter()
 
@@ -48,3 +64,11 @@ urlpatterns = [
     path('auth/token', csrf_exempt(request_token)),
     path('admin/', admin.site.urls),
 ]
+
+if settings.DEBUG:
+    urlpatterns += [
+        # API Documentation (only in DEBUG mode)
+        path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+        path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+        path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    ]
