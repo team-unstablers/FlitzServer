@@ -27,7 +27,7 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageConversation.objects \
-            .filter(deleted_at__isnull=None, participants__user=self.request.user)
+            .filter(deleted_at__isnull=True, participants__user=self.request.user)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
