@@ -154,7 +154,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance: DirectMessage = self.get_object()
 
-        if instance.sender_id is not self.request.user.id:
+        if instance.sender_id != self.request.user.id:
             raise Http404()
 
         instance.deleted_at = timezone.now()
@@ -205,6 +205,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             attachment = DirectMessageAttachment.objects.create(
+                sender=self.request.user,
                 conversation=conversation,
                 type=attachment_type,
                 object_key='',
