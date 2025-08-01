@@ -56,7 +56,7 @@ class DirectMessageConversationViewSetTests(APITestCase):
         """대화방 삭제 API 테스트"""
         # 대화방 생성
         conversation = DirectMessageConversation.create_conversation(self.user1, self.user2)
-        
+
         url = reverse('DirectMessageConversation-detail', args=[conversation.id])
         response = self.client.delete(url)
         
@@ -126,10 +126,13 @@ class DirectMessageViewSetTests(APITestCase):
         
         url = reverse('DirectMessage-list', args=[self.conversation.id])
         response = self.client.get(url)
+
+        container = response.data
+        results = container.get('results', [])
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['content']['text'], 'Test message')
+        self.assertGreaterEqual(len(results), 1)
+        self.assertEqual(results[0]['content']['text'], 'Test message')
     
     @mock.patch('messaging.views.get_channel_layer')
     @mock.patch('messaging.views.async_to_sync')
@@ -223,7 +226,7 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
             content_type='image/jpeg'
         )
         
-        url = reverse('direct-message-attachments-list', args=[self.conversation.id])
+        url = reverse('DirectMessageAttachments-list', args=[self.conversation.id])
         data = {'file': test_image}
         
         response = self.client.post(url, data, format='multipart')
