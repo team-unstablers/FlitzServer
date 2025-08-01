@@ -33,6 +33,8 @@ LOCALHOST = "cheese-mbpr14.local"
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -79,6 +81,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'flitz.wsgi.application'
+ASGI_APPLICATION = 'flitz.asgi.application'
 
 
 # Database
@@ -186,6 +189,18 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6380/0'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
+
+# Channel Layers for Django Channels
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('localhost', 6380)],
+            'capacity': 1500,  # Channel Layer 버퍼가 가질 수 있는 최대 메시지 수
+            'expiry': 10,  # 메시지가 자동으로 삭제되기까지의 시간(초)
+        },
+    },
+}
 
 APNS_KEY_FILE = "FlitzAPNS.p8"
 APNS_TEAM_ID = "XHA76UVA95"

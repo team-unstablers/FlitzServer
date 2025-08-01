@@ -171,6 +171,7 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 ## Backend Framework
 - Django 5.1.3 (https://docs.djangoproject.com/en/5.1/)
 - Django REST Framework 3.15.2 (https://www.django-rest-framework.org/)
+- Django Channels 4.0.0 (https://channels.readthedocs.io/en/stable/)
 - Python 3.12
 
 ## Database
@@ -184,6 +185,7 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 ## 비동기 작업 처리
 - Celery 5.4.0 (Redis 브로커 사용)
 - 푸시 알림 및 기타 백그라운드 작업 처리
+- Django Channels + Redis 기반 실시간 WebSocket 통신
 
 ## 인증 및 알림
 - 커스텀 JWT 기반 인증 (user_auth.authentication.UserSessionAuthentication)
@@ -240,7 +242,38 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 - 대화방(DirectMessageConversation)과 메시지(DirectMessage) 분리
 - 메시지 내용은 JSON 형태로 저장 (텍스트, 첨부파일 등)
 - 첨부파일 시스템 구현 (이미지, 동영상, 오디오 등)
-- 메시지 신고 기능 구현
+- 메시지 신고 기능 구현 (DirectMessageFlag 모델)
+
+### WebSocket 실시간 메시징
+- **엔드포인트**: `ws/direct-messages/{conversation_id}/`
+- **인증**: JWT 토큰을 쿼리 파라미터로 전달 (`?token=...`)
+- **이벤트 타입**:
+  - `message`: 새로운 메시지 수신
+  - `read_event`: 읽음 상태 업데이트
+- **자동 읽음 처리**: WebSocket 연결 시 및 메시지 수신 시 자동으로 읽음 상태 업데이트
+- **채널 그룹**: `direct_message_{conversation_id}` 형태로 대화방별 그룹 관리
+
+### 메시지 콘텐츠 타입 (objdef.py)
+- **텍스트 메시지**: `{ type: 'text', text: string }`
+- **첨부파일 메시지**: `{ type: 'attachment', attachment_type: string, attachment_id: string, public_url?: string, thumbnail_url?: string }`
+- `load_direct_message_content()` 함수로 타입별 객체 변환
+
+### REST API 엔드포인트
+- **대화방 관리**: `/api/conversations/`
+  - 대화방 생성 시 중복 체크 (이미 존재하는 대화방이면 409 Conflict)
+  - Soft Delete 방식으로 삭제 처리
+- **메시지 관리**: `/api/conversations/{conversation_id}/messages/`
+  - 메시지 전송 시 WebSocket으로 실시간 이벤트 발송
+  - `mark_as_read` 액션으로 읽음 상태 업데이트
+- **첨부파일 관리**: `/api/conversations/{conversation_id}/attachments/`
+  - 이미지 첨부 시 자동 썸네일 생성
+  - 첨부파일 업로드 시 자동으로 메시지 생성
+
+### 주요 모델 구조
+- **DirectMessageConversation**: 대화방 (latest_message 참조)
+- **DirectMessageParticipant**: 대화 참여자 (read_at 필드로 읽음 상태 관리)
+- **DirectMessage**: 메시지 (content는 JSON, GinIndex로 검색 최적화)
+- **DirectMessageAttachment**: 첨부파일 메타데이터 (S3 키와 URL 관리)
 
 ## User Matching (user 앱)
 - 양방향 좋아요 시 자동 매칭 시스템

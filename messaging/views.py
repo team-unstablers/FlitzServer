@@ -8,10 +8,13 @@ from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from flitz.exceptions import UnsupportedOperationException
 
-from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment
+from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, DirectMessageParticipant
 from messaging.objdef import DirectMessageAttachmentContent
 from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer
 from flitz.thumbgen import generate_thumbnail
@@ -24,7 +27,7 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageConversation.objects \
-            .filter(deleted_at__isnull=None, participants__user=self.request.user)
+            .filter(deleted_at__isnull=True, participants__user=self.request.user)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -86,8 +89,58 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         conversation = self.get_conversation()
         conversation.latest_message_id = created_instance.id
         conversation.save()
+        
+        # 실시간 메시지 이벤트 발송
+        channel_layer = get_channel_layer()
+        group_name = f'direct_message_{created_instance.conversation_id}'
+        
+        message_data = {
+            'id': str(created_instance.id),
+            'content': created_instance.content,
+            'sender_id': str(created_instance.sender_id),
+            'created_at': created_instance.created_at.isoformat()
+        }
+        
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'dm_message',
+                'message': message_data
+            }
+        )
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+    @action(detail=False, methods=['post'])
+    def mark_as_read(self, request, conversation_id=None):
+        """메시지를 읽음 상태로 표시하는 API 엔드포인트"""
+        conversation = self.get_conversation()
+        
+        # 참여자의 읽음 상태 업데이트
+        try:
+            participant = DirectMessageParticipant.objects.get(
+                conversation=conversation,
+                user=request.user
+            )
+            participant.read_at = timezone.now()
+            participant.save()
+            
+            # 읽음 상태 이벤트 발송
+            channel_layer = get_channel_layer()
+            group_name = f'direct_message_{conversation.id}'
+            
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'dm_read_event',
+                    'user_id': str(request.user.id),
+                    'read_at': participant.read_at.isoformat()
+                }
+            )
+            
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        except DirectMessageParticipant.DoesNotExist:
+            raise Http404("You are not a participant in this conversation")
 
     def retrieve(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
@@ -101,7 +154,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance: DirectMessage = self.get_object()
 
-        if instance.sender_id is not self.request.user.id:
+        if instance.sender_id != self.request.user.id:
             raise Http404()
 
         instance.deleted_at = timezone.now()
@@ -152,6 +205,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             attachment = DirectMessageAttachment.objects.create(
+                sender=self.request.user,
                 conversation=conversation,
                 type=attachment_type,
                 object_key='',
@@ -178,7 +232,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 type='attachment',
 
                 attachment_type='image',
-                attachment_id=attachment.id,
+                attachment_id=str(attachment.id),  # UUID를 문자열로 변환
 
                 # 굳이 원본을 보여줄 필요는 없음
                 public_url=attachment.thumbnail_url,
@@ -195,6 +249,25 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
         conversation.latest_message = message
         conversation.save()
+        
+        # 첨부파일 메시지에 대한 실시간 이벤트 발송
+        channel_layer = get_channel_layer()
+        group_name = f'direct_message_{conversation.id}'
+        
+        message_data = {
+            'id': str(message.id),
+            'content': message.content,
+            'sender_id': str(message.sender_id),
+            'created_at': message.created_at.isoformat()
+        }
+        
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'dm_message',
+                'message': message_data
+            }
+        )
 
         # 이게 과연 맞는지?
         serializer = DirectMessageSerializer(message)

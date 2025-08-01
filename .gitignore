@@ -176,7 +176,7 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 .DS_Store
 
-flitz-server-devenv/minio-data
-flitz-server-devenv/redis-data
+flitz-devenv/minio-data
+flitz-devenv/redis-data
 
 *.p8
