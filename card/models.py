@@ -93,6 +93,9 @@ class Card(BaseModel):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
+    # 최종으로 GC가 실행된 시간
+    gc_ran_at = models.DateTimeField(null=True, blank=True)
+
     def remove_orphaned_assets(self):
         card_obj = from_dict(data_class=CardObject, data=self.content)
 
