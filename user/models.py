@@ -6,7 +6,6 @@ from django.db import models, transaction
 from uuid_v7.base import uuid7
 
 from flitz.models import UUIDv7Field, BaseModel
-from flitz.apns import APNS
 from flitz.thumbgen import generate_thumbnail
 from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
@@ -66,12 +65,10 @@ class User(AbstractUser):
         :note: 이 메소드를 직접 호출하지 마십시오! 대신 `user.tasks.send_push_message`를 사용하십시오. (Celery task)
         """
 
-        # 원래대로라면 유효한 세션은 하나여야 하지만, 추후 여러 기기에서 로그인할 수 있도록 수정될 수 있으므로
-        valid_sessions = self.sessions.filter(invalidated_at=None)
-        apns_tokens = valid_sessions.values('apns_token')
+        if not self.primary_session:
+            return
 
-        apns = APNS.default()
-        apns.send_notification(title, body, apns_tokens, data)
+        self.primary_session.send_push_message(title, body, data)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None):
         from location.models import UserLocation
@@ -162,7 +159,7 @@ class UserMatch(BaseModel):
             f'{user_b.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {
                 'type': 'match',
-                'user_id': user_b.id,
+                'user_id': str(user_b.id),
                 'conversation_id': conversation.id
             }
         )
@@ -173,7 +170,7 @@ class UserMatch(BaseModel):
             f'{user_a.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {
                 'type': 'match',
-                'user_id': user_a.id,
+                'user_id': str(user_a.id),
                 'conversation_id': conversation.id
             }
         )
