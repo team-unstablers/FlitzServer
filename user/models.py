@@ -17,8 +17,12 @@ def profile_image_upload_to(instance, filename):
     """
     프로필 이미지의 저장 경로를 생성합니다.
     파일명은 UUID7을 사용하고, 항상 .jpg로 저장됩니다.
+    디렉토리 샤딩을 적용하여 성능을 최적화합니다.
     """
-    return f"profile_images/{uuid7()}.jpg"
+    file_uuid = str(uuid7())
+    # UUID의 첫 2글자로 디렉토리 샤딩 (256개 디렉토리로 분산)
+    shard = file_uuid[:2]
+    return f"profile_images/{shard}/{file_uuid}.jpg"
 
 class User(AbstractUser):
     class Meta:

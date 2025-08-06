@@ -13,14 +13,34 @@ from user.models import User
 
 # Create your models here.
 
+def official_card_asset_upload_to(instance, filename):
+    """
+    공식 카드 에셋 파일의 저장 경로를 생성합니다.
+    파일명은 UUID7을 사용하고, 확장자는 원본 파일에서 가져옵니다.
+    디렉토리 샤딩을 적용하여 성능을 최적화합니다.
+    """
+    ext = filename.split('.')[-1] if '.' in filename else ''
+    file_uuid = str(uuid7())
+    filename = f"{file_uuid}.{ext}" if ext else file_uuid
+    
+    # UUID의 첫 2글자로 디렉토리 샤딩 (256개 디렉토리로 분산)
+    shard = file_uuid[:2]
+    return f"official_card_assets/{shard}/{filename}"
+
+
 def card_asset_upload_to(instance, filename):
     """
     카드 에셋 파일의 저장 경로를 생성합니다.
     파일명은 UUID7을 사용하고, 확장자는 원본 파일에서 가져옵니다.
+    디렉토리 샤딩을 적용하여 성능을 최적화합니다.
     """
     ext = filename.split('.')[-1] if '.' in filename else ''
-    filename = f"{uuid7()}.{ext}" if ext else str(uuid7())
-    return f"card_assets/{filename}"
+    file_uuid = str(uuid7())
+    filename = f"{file_uuid}.{ext}" if ext else file_uuid
+    
+    # UUID의 첫 2글자로 디렉토리 샤딩 (256개 디렉토리로 분산)
+    shard = file_uuid[:2]
+    return f"card_assets/{shard}/{filename}"
 
 
 
@@ -48,8 +68,7 @@ class OfficialCardAsset(BaseModel):
     description = models.CharField(max_length=128, null=True, blank=True)
 
     type = models.CharField(max_length=32, null=False, blank=False)
-    object_key = models.CharField(max_length=2048, null=False, blank=False)
-    public_url = models.CharField(max_length=2048, null=False, blank=False)
+    object = models.FileField(upload_to=official_card_asset_upload_to)
 
     mimetype = models.CharField(max_length=128, null=False, blank=False)
     size = models.IntegerField(null=False, blank=False)
