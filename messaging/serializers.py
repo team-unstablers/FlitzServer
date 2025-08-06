@@ -166,6 +166,10 @@ class DirectMessageAttachmentSerializer(serializers.ModelSerializer):
     """
     DM 첨부파일 정보를 fetch할 때 사용되는 serializer
     """
+
+    public_url = serializers.FileField(source='object', read_only=True)
+    thumbnail_url = serializers.ImageField(source='thumbnail', read_only=True)
+
     class Meta:
         model = DirectMessageAttachment
-        fields = ('id', 'type', 'public_url', 'mimetype', 'size', 'created_at', 'updated_at')
+        fields = ('id', 'type', 'public_url', 'thumbnail_url', 'mimetype', 'size', 'created_at', 'updated_at')
