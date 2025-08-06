@@ -31,47 +31,6 @@ class DirectMessageParticipantSerializer(serializers.ModelSerializer):
         fields = (*read_only_fields,)
 
 
-class DirectMessageConversationSerializer(serializers.ModelSerializer):
-    """
-    | write: initial_participants(id[])
-    | read: latest_message, participants
-    |
-    | 시리얼라이저를 통해서는 create 만 지원. update 는 UnsupportedOperationException 을 발생시킵니다.
-    """
-
-    initial_participants = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        many=True,
-        write_only=True
-    )
-    participants = DirectMessageParticipantSerializer(
-        many=True,
-        read_only=True
-    )
-
-    def create(self, validated_data):
-        initial_participants = validated_data.pop('initial_participants')
-
-        created = super().create(validated_data)
-
-        for initial_participant in initial_participants:
-            DirectMessageParticipant.objects \
-                .create(
-                    user_id=initial_participant.id,
-                    conversation_id=created.id
-                ) \
-                .save()
-
-        return created
-
-    def update(self, instance, validated_data):
-        raise UnsupportedOperationException()
-
-    class Meta:
-        model = DirectMessageConversation
-        read_only_fields = ('id', 'latest_message', 'participants')
-        fields = (*read_only_fields, 'initial_participants')
-
 
 class DirectMessageSerializer(serializers.ModelSerializer):
     """
@@ -104,8 +63,66 @@ class DirectMessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DirectMessage
-        read_only_fields = ('id', 'sender')
-        fields = (*read_only_fields, 'content', 'sent_by', 'parent_conversation')
+        read_only_fields = ('id', 'sender', 'created_at', 'updated_at')
+        fields = (*read_only_fields, 'content', 'sent_by', 'parent_conversation', 'created_at', 'updated_at')
+
+
+class DirectMessageAttachmentSerializer(serializers.ModelSerializer):
+    """
+    DM 첨부파일 정보를 fetch할 때 사용되는 serializer
+    """
+
+    public_url = serializers.FileField(source='object', read_only=True)
+    thumbnail_url = serializers.ImageField(source='thumbnail', read_only=True)
+
+    class Meta:
+        model = DirectMessageAttachment
+        fields = ('id', 'type', 'public_url', 'thumbnail_url', 'mimetype', 'size', 'created_at', 'updated_at')
+
+
+class DirectMessageConversationSerializer(serializers.ModelSerializer):
+    """
+    | write: initial_participants(id[])
+    | read: latest_message, participants
+    |
+    | 시리얼라이저를 통해서는 create 만 지원. update 는 UnsupportedOperationException 을 발생시킵니다.
+    """
+
+    initial_participants = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        many=True,
+        write_only=True
+    )
+
+    latest_message = DirectMessageSerializer(read_only=True)
+
+    participants = DirectMessageParticipantSerializer(
+        many=True,
+        read_only=True
+    )
+
+    def create(self, validated_data):
+        initial_participants = validated_data.pop('initial_participants')
+
+        created = super().create(validated_data)
+
+        for initial_participant in initial_participants:
+            DirectMessageParticipant.objects \
+                .create(
+                    user_id=initial_participant.id,
+                    conversation_id=created.id
+                ) \
+                .save()
+
+        return created
+
+    def update(self, instance, validated_data):
+        raise UnsupportedOperationException()
+
+    class Meta:
+        model = DirectMessageConversation
+        read_only_fields = ('id', 'latest_message', 'participants')
+        fields = (*read_only_fields, 'initial_participants')
 
 
 class DirectMessageFlagSerializer(serializers.ModelSerializer):
@@ -160,16 +177,3 @@ class DirectMessageFlagSerializer(serializers.ModelSerializer):
             *read_only_fields,
             'target_message',
         )
-
-
-class DirectMessageAttachmentSerializer(serializers.ModelSerializer):
-    """
-    DM 첨부파일 정보를 fetch할 때 사용되는 serializer
-    """
-
-    public_url = serializers.FileField(source='object', read_only=True)
-    thumbnail_url = serializers.ImageField(source='thumbnail', read_only=True)
-
-    class Meta:
-        model = DirectMessageAttachment
-        fields = ('id', 'type', 'public_url', 'thumbnail_url', 'mimetype', 'size', 'created_at', 'updated_at')
