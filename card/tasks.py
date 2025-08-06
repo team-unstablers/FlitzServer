@@ -34,7 +34,7 @@ def perform_gc_asset_references():
         with transaction.atomic():
             try:
                 card.remove_orphaned_assets()
-                card.gc_ran_at = card.updated_at
+                card.gc_ran_at = timezone.now()
                 card.save(update_fields=['gc_ran_at'])
             except Exception as e:
                 logger.error(f"Error while performing GC on card {card.id}: {e}", exc_info=True)
