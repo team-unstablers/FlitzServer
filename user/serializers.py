@@ -6,6 +6,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
     타 사용자를 fetch할 때 사용되는 serializer
     """
+
+    profile_image_url = serializers.FileField(source='profile_image', read_only=True)
+
     class Meta:
         model = User
         fields = ('id', 'username', 'display_name', 'profile_image_url')
