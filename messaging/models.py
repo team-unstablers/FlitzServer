@@ -1,4 +1,4 @@
-from django.core.files.storage import default_storage, Storage
+from django.db.models import Q
 from django.utils import timezone
 
 from django.db import models
@@ -7,6 +7,8 @@ from uuid_v7.base import uuid7
 
 from flitz.models import BaseModel
 from user.models import User
+
+from user import tasks as user_tasks
 
 # Create your models here.
 
@@ -74,6 +76,40 @@ class DirectMessage(BaseModel):
 
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+    def send_push_notification(self):
+        content = self.content
+        content_type = content.get('type')
+
+        notification_title = f'{self.sender.display_name} 님의 새 메시지'
+
+        if content_type == 'text':
+            notification_body = content.get('text')
+        elif content_type == 'image':
+            notification_body = f'{self.sender.display_name} 님이 이미지를 보냈습니다.'
+        elif content_type == 'video':
+            notification_body = f'{self.sender.display_name} 님이 동영상을 보냈습니다.'
+        elif content_type == 'audio':
+            notification_body = f'{self.sender.display_name} 님이 음성 메시지를 보냈습니다.'
+        else:
+            notification_body = f'{self.sender.display_name} 님이 새 메시지를 보냈습니다.'
+
+        participants = self.conversation.participants.filter(
+            ~Q(user=self.sender)
+        ).values_list('user_id', flat=True)
+
+        for participant_id in participants:
+            user_tasks.send_push_message.delay_on_commit(
+                participant_id,
+                notification_title,
+                notification_body,
+                {
+                    'type': 'message',
+                    'user_id': str(self.sender.id),
+                    'conversation_id': str(self.conversation.id)
+                }
+            )
+
+
 class DirectMessageAttachment(BaseModel):
     class AttachmentType(models.TextChoices):
         IMAGE = 'image'
@@ -103,7 +139,7 @@ class DirectMessageAttachment(BaseModel):
 
         except Exception as e:
             print(e)
-            
+
         self.deleted_at = timezone.now()
         self.save()
 

@@ -2,7 +2,6 @@ from dataclasses import asdict
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
-from django.db.models import Q
 from django.http import Http404
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
@@ -19,7 +18,6 @@ from messaging.objdef import DirectMessageAttachmentContent
 from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer
 from flitz.thumbgen import generate_thumbnail
 
-from user import tasks as user_tasks
 
 class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
@@ -110,21 +108,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
             }
         )
 
-        participants = conversation.participants.filter(
-            ~Q(user=self.request.user)
-        ).values_list('user_id', flat=True)
-
-        for participant_id in participants:
-            user_tasks.send_push_message.delay_on_commit(
-                participant_id,
-                f'{request.user.display_name} 님의 새 메시지',
-                f'{message_data["content"]}',
-                {
-                    'type': 'message',
-                    'user_id': str(request.user.id),
-                    'conversation_id': str(conversation.id)
-                }
-            )
+        created_instance.send_push_notification()
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
         
