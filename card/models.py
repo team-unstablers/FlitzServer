@@ -68,7 +68,7 @@ class OfficialCardAsset(BaseModel):
     description = models.CharField(max_length=128, null=True, blank=True)
 
     type = models.CharField(max_length=32, null=False, blank=False)
-    object = models.FileField(upload_to=official_card_asset_upload_to)
+    object = models.FileField(upload_to=official_card_asset_upload_to, null=True)
 
     mimetype = models.CharField(max_length=128, null=False, blank=False)
     size = models.IntegerField(null=False, blank=False)
@@ -118,7 +118,7 @@ class UserCardAsset(BaseModel):
 
     type = models.CharField(max_length=32, null=False, blank=False, choices=AssetType.choices)
 
-    object = models.FileField(upload_to=card_asset_upload_to)
+    object = models.FileField(upload_to=card_asset_upload_to, null=True)
 
     mimetype = models.CharField(max_length=128, null=False, blank=False)
     size = models.IntegerField(null=False, blank=False)

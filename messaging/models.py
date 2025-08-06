@@ -86,7 +86,7 @@ class DirectMessageAttachment(BaseModel):
 
     type = models.CharField(max_length=32, choices=AttachmentType.choices)
 
-    object = models.FileField(upload_to=attachment_upload_to)
+    object = models.FileField(upload_to=attachment_upload_to, null=True)
     thumbnail = models.ImageField(upload_to=attachment_thumbnail_upload_to, null=True, blank=True)
 
     mimetype = models.CharField(max_length=128)
