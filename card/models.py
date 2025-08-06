@@ -93,13 +93,17 @@ class Card(BaseModel):
     deleted_at = models.DateTimeField(null=True, blank=True)
     banned_at = models.DateTimeField(null=True, blank=True)
 
+    # 최종으로 GC가 실행된 시간
+    gc_ran_at = models.DateTimeField(null=True, blank=True)
+
     def remove_orphaned_assets(self):
         card_obj = from_dict(data_class=CardObject, data=self.content)
 
         current_references = card_obj.extract_asset_references()
         current_references_ids = [ref.id for ref in current_references]
 
-        references_in_db = self.asset_references.all()
+        # 삭제되지 않은 애셋 레퍼런스만 필터링
+        references_in_db = self.asset_references.filter(deleted_at__isnull=True)
 
         with transaction.atomic():
             for reference in references_in_db:
