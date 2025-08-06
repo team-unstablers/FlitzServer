@@ -1,7 +1,9 @@
 import json
 
+from django.db import transaction
 from django.http import HttpResponse
 from django.http.request import HttpRequest
+from django.utils import timezone
 
 from user.models import User
 from user_auth.models import UserSession
@@ -28,13 +30,22 @@ def request_token(request: HttpRequest):
         if not user.check_password(validated_data['password']):
             return HttpResponse(status=401)
 
-        # create session
-        session = UserSession.objects.create(
-            user=user,
-            description=validated_data['device_info'],
-            initiated_from=request.META.get('REMOTE_ADDR'),
-            apns_token=validated_data.get('apns_token'),
-        )
+        with transaction.atomic():
+            # invalidate previous sessions
+            UserSession.objects.filter(
+                user=user, invalidated_at__isnull=True
+            ).update(invalidated_at=timezone.now())
+
+            # create session
+            session = UserSession.objects.create(
+                user=user,
+                description=validated_data['device_info'],
+                initiated_from=request.META.get('REMOTE_ADDR'),
+                apns_token=validated_data.get('apns_token'),
+            )
+
+            user.primary_session = session
+            user.save()
 
         # create token
         token = session.create_token()
