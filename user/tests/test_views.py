@@ -1,5 +1,5 @@
-from django.test import TestCase
-from django.urls import reverse
+import warnings
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch, MagicMock
 
@@ -75,7 +75,7 @@ class PublicUserViewSetTests(APITestCase):
     @patch('user.models.User.set_profile_image')
     def test_set_profile_image(self, mock_set_profile_image):
         """프로필 이미지 설정 테스트"""
-        print("test_set_profile_image: WARN: 실제 이미지를 전송하도록 수정해야 하지 않을까요?")
+        warnings.warn("test_set_profile_image: WARN: 실제 이미지를 전송하도록 수정해야 하지 않을까요?")
 
         # Create file
         image_file = SimpleUploadedFile(
