@@ -48,7 +48,7 @@ schema_view = get_schema_view(
 router = routers.DefaultRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
-router.register(r'conversations/(?P<conversation_id>[0-9a-fA-F\-]+)/message', DirectMessageViewSet, basename='DirectMessage')
+router.register(r'conversations/(?P<conversation_id>[0-9a-fA-F\-]+)/messages', DirectMessageViewSet, basename='DirectMessage')
 router.register(r'conversations/(?P<conversation_id>[0-9a-fA-F\-]+)/attachments', DirectMessageAttachmentViewSet, basename='DirectMessageAttachments')
 router.register(r'conversations', DirectMessageConversationViewSet, basename='DirectMessageConversation')
 
