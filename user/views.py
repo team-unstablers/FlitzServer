@@ -1,9 +1,5 @@
-from django.core.files.storage import Storage, default_storage
 from django.core.files.uploadedfile import UploadedFile
-from django.db import transaction
 from django.shortcuts import render, get_object_or_404
-
-from uuid_v7.base import uuid7
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -59,28 +55,12 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='self/profile-image')
     def set_profile_image(self, request, *args, **kwargs):
-        user = self.request.user
+        user: User = self.request.user
 
         file: UploadedFile = request.data['file']
-        extension = file.name.split('.')[-1]
-
-        if not file.content_type.startswith('image'):
-            raise UnsupportedOperationException()
-
-        with transaction.atomic():
-            object_key = f'profile_images/{str(uuid7())}.jpg'
-
-            storage: Storage = default_storage
-            thumbnail = generate_thumbnail(file)
-
-            storage.save(object_key, thumbnail)
-            user.profile_image_key = object_key
-            user.profile_image_url = storage.url(object_key).split('?')[0]
-
-            user.save()
+        user.set_profile_image(file)
 
         serializer = PublicSelfUserSerializer(user)
-
         return Response(serializer.data)
 
     @action(detail=False, methods=['GET'], url_path=r'by-username/(?P<username>[a-zA-Z0-9_]+)')

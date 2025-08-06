@@ -1,6 +1,5 @@
 from dataclasses import asdict
 
-from django.core.files.storage import default_storage, Storage
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.http import Http404
@@ -204,29 +203,19 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
             raise UnsupportedOperationException()
 
         with transaction.atomic():
+            # TODO: resize image and remove EXIF data
+            sanitized_file = file
+            thumbnail = generate_thumbnail(file)
+
             attachment = DirectMessageAttachment.objects.create(
                 sender=self.request.user,
                 conversation=conversation,
                 type=attachment_type,
-                object_key='',
-                public_url='',
+                object=sanitized_file,
+                thumbnail=thumbnail,
                 mimetype=file.content_type,
                 size=file.size
             )
-
-            attachment.object_key = f'dm_attachments/{attachment.id}.orig'
-            attachment.thumbnail_key = f'dm_attachments/{attachment.id}.jpg'
-
-            storage: Storage = default_storage
-            storage.save(attachment.object_key, file)
-
-            thumbnail_file = generate_thumbnail(file)
-            storage.save(attachment.thumbnail_key, thumbnail_file)
-
-            attachment.public_url = storage.url(attachment.object_key).split('?')[0]
-            attachment.thumbnail_url = storage.url(attachment.thumbnail_key).split('?')[0]
-
-            attachment.save()
 
             content = DirectMessageAttachmentContent(
                 type='attachment',
@@ -235,8 +224,8 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 attachment_id=str(attachment.id),  # UUID를 문자열로 변환
 
                 # 굳이 원본을 보여줄 필요는 없음
-                public_url=attachment.thumbnail_url,
-                thumbnail_url=attachment.thumbnail_url
+                public_url=attachment.thumbnail.url,
+                thumbnail_url=attachment.thumbnail.url
             )
 
             # Optionally create a direct message referencing the new attachment

@@ -197,21 +197,16 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
         self.client.force_authenticate(user=self.user1)
     
     @mock.patch('messaging.views.generate_thumbnail')
-    @mock.patch('messaging.views.default_storage')
     @mock.patch('messaging.views.get_channel_layer')
     @mock.patch('messaging.views.async_to_sync')
     def test_upload_attachment(self, mock_async_to_sync, mock_get_channel_layer, 
-                               mock_default_storage, mock_generate_thumbnail):
+                               mock_generate_thumbnail):
         """첨부파일 업로드 API 테스트 및 실시간 이벤트 발송 테스트"""
         # 채널 레이어 모킹
         mock_channel_layer = mock.MagicMock()
         mock_get_channel_layer.return_value = mock_channel_layer
         mock_group_send = mock.MagicMock()
         mock_async_to_sync.return_value = mock_group_send
-        
-        # 스토리지 모킹 설정
-        mock_default_storage.save.return_value = 'saved_path'
-        mock_default_storage.url.return_value = 'http://test-url/image.jpg'
         
         # 썸네일 생성 모킹 - 실제 파일 객체 반환
         from io import BytesIO
@@ -243,5 +238,5 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
         event_data = call_args[1]
         self.assertEqual(event_data['type'], 'dm_message')
         
-        # 이미지 저장 확인
-        self.assertEqual(mock_default_storage.save.call_count, 2)  # 원본과 썸네일
+        # 썸네일 생성 함수 호출 확인
+        mock_generate_thumbnail.assert_called_once()
