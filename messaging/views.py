@@ -92,14 +92,9 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         # 실시간 메시지 이벤트 발송
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{created_instance.conversation_id}'
-        
-        message_data = {
-            'id': str(created_instance.id),
-            'content': created_instance.content,
-            'sender_id': str(created_instance.sender_id),
-            'created_at': created_instance.created_at.isoformat()
-        }
-        
+
+        message_data = self.get_serializer(instance=created_instance).data
+
         async_to_sync(channel_layer.group_send)(
             group_name,
             {

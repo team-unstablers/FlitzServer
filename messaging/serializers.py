@@ -45,7 +45,8 @@ class DirectMessageSerializer(serializers.ModelSerializer):
         write_only=True
     )
     sender = serializers.PrimaryKeyRelatedField(
-        read_only=True
+        read_only=True,
+        pk_field=serializers.CharField()
     )
 
     parent_conversation = serializers.PrimaryKeyRelatedField(
