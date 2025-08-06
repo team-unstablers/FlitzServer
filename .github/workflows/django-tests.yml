@@ -99,6 +99,7 @@ jobs:
       env:
         CELERY_BROKER_URL: redis://localhost:6380/0
         CELERY_RESULT_BACKEND: redis://localhost:6380/0
+        FLITZ_HOST: localhost
         # 테스트 환경임을 명시
         DJANGO_SETTINGS_MODULE: flitz.settings
         FLITZ_TEST: 1
