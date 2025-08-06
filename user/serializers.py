@@ -7,7 +7,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     타 사용자를 fetch할 때 사용되는 serializer
     """
 
-    profile_image_url = serializers.URLField(source='profile_image.url', read_only=True)
+    profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
 
     class Meta:
         model = User
@@ -15,7 +15,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
 
 class PublicSimpleUserSerializer(serializers.ModelSerializer):
 
-    profile_image_url = serializers.URLField(source='profile_image.url', read_only=True)
+    profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
 
     """
     타 사용자를 fetch할 때 사용되는 serializer
@@ -29,7 +29,7 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     자신의 정보를 fetch할 때 사용되는 serializer
     """
 
-    profile_image_url = serializers.URLField(source='profile_image.url', read_only=True)
+    profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
 
     class Meta:
         model = User
