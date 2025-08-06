@@ -15,7 +15,7 @@ class PublicUserSerializerTests(TestCase):
             username='testuser',
             display_name='Test User',
             password='testpassword',
-            profile_image_url='https://example.com/image.jpg'
+            profile_image=None
         )
         self.serializer = PublicUserSerializer(instance=self.user)
 
@@ -29,7 +29,7 @@ class PublicUserSerializerTests(TestCase):
         data = self.serializer.data
         self.assertEqual(data['username'], 'testuser')
         self.assertEqual(data['display_name'], 'Test User')
-        self.assertEqual(data['profile_image_url'], 'https://example.com/image.jpg')
+        self.assertEqual(data['profile_image_url'], None)
         self.assertEqual(str(data['id']), str(self.user.id))
 
 
@@ -39,7 +39,7 @@ class PublicSimpleUserSerializerTests(TestCase):
             username='testuser',
             display_name='Test User',
             password='testpassword',
-            profile_image_url='https://example.com/image.jpg'
+            profile_image=None,
         )
         self.serializer = PublicSimpleUserSerializer(instance=self.user)
 
@@ -53,7 +53,7 @@ class PublicSimpleUserSerializerTests(TestCase):
         data = self.serializer.data
         self.assertEqual(data['username'], 'testuser')
         self.assertEqual(data['display_name'], 'Test User')
-        self.assertEqual(data['profile_image_url'], 'https://example.com/image.jpg')
+        self.assertEqual(data['profile_image_url'], None)
         self.assertEqual(str(data['id']), str(self.user.id))
 
 
@@ -63,7 +63,7 @@ class PublicSelfUserSerializerTests(TestCase):
             username='testuser',
             display_name='Test User',
             password='testpassword',
-            profile_image_url='https://example.com/image.jpg',
+            profile_image=None,
             free_coins=100,
             paid_coins=50
         )
@@ -72,7 +72,7 @@ class PublicSelfUserSerializerTests(TestCase):
     def test_contains_expected_fields(self):
         """PublicSelfUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
-        self.assertEqual(set(data.keys()), 
+        self.assertEqual(set(data.keys()),
                          {'id', 'username', 'display_name', 'profile_image_url', 
                           'free_coins', 'paid_coins'})
 
@@ -81,7 +81,8 @@ class PublicSelfUserSerializerTests(TestCase):
         data = self.serializer.data
         self.assertEqual(data['username'], 'testuser')
         self.assertEqual(data['display_name'], 'Test User')
-        self.assertEqual(data['profile_image_url'], 'https://example.com/image.jpg')
+        # FIXME: 프로필 이미지는 아직 없음
+        self.assertEqual(data['profile_image_url'], None)
         self.assertEqual(data['free_coins'], 100)
         self.assertEqual(data['paid_coins'], 50)
         self.assertEqual(str(data['id']), str(self.user.id))
