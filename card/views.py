@@ -3,7 +3,6 @@ from idlelib.pyparse import trans
 
 from dacite import from_dict
 from django.core.files.uploadedfile import UploadedFile
-from django.core.files.storage import default_storage, Storage
 from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 
@@ -221,19 +220,10 @@ class PublicCardViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 card=card,
                 type=type,
-                object_key='',
-                public_url='',
+                object=file,  # FileField에 직접 파일 할당
                 mimetype=file.content_type,
                 size=file.size
             )
-
-            asset.object_key = f'card_assets/{asset.id}.{extension}'
-
-            storage: Storage = default_storage
-            storage.save(asset.object_key, file)
-
-            asset.public_url = storage.url(asset.object_key).split('?')[0]
-            asset.save()
 
 
         serializer = PublicSelfUserCardAssetSerializer(asset)

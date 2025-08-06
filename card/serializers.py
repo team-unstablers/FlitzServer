@@ -9,6 +9,8 @@ class PublicSelfUserCardAssetSerializer(serializers.ModelSerializer):
     """
     카드 에셋 정보를 fetch할 때 사용되는 serializer
     """
+    public_url = serializers.FileField(source='object', read_only=True)
+    
     class Meta:
         model = UserCardAsset
         fields = ('id', 'type', 'public_url', 'mimetype', 'size', 'created_at', 'updated_at')

@@ -1,11 +1,10 @@
-from datetime import datetime
-
 from dacite import from_dict
 from django.core.files.storage import default_storage, Storage
 from django.db import models, transaction
 from django.conf import settings
-
 from django.utils import timezone
+
+from uuid_v7.base import uuid7
 
 from card.objdef import CardObject
 from flitz.models import BaseModel
@@ -13,6 +12,15 @@ from location.models import LocationDistanceMixin
 from user.models import User
 
 # Create your models here.
+
+def card_asset_upload_to(instance, filename):
+    """
+    카드 에셋 파일의 저장 경로를 생성합니다.
+    파일명은 UUID7을 사용하고, 확장자는 원본 파일에서 가져옵니다.
+    """
+    ext = filename.split('.')[-1] if '.' in filename else ''
+    filename = f"{uuid7()}.{ext}" if ext else str(uuid7())
+    return f"card_assets/{filename}"
 
 
 
@@ -90,8 +98,8 @@ class UserCardAsset(BaseModel):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='asset_references')
 
     type = models.CharField(max_length=32, null=False, blank=False, choices=AssetType.choices)
-    object_key = models.CharField(max_length=2048, null=False, blank=False)
-    public_url = models.CharField(max_length=2048, null=False, blank=False)
+
+    object = models.FileField(upload_to=card_asset_upload_to)
 
     mimetype = models.CharField(max_length=128, null=False, blank=False)
     size = models.IntegerField(null=False, blank=False)
@@ -100,14 +108,11 @@ class UserCardAsset(BaseModel):
     banned_at = models.DateTimeField(null=True, blank=True)
 
     def delete_asset(self):
-        try:
-            storage: Storage = default_storage
-            storage.delete(self.object_key)
-        except Exception as e:
-            print(e)
+        # FileField가 실제 파일을 가지고 있는지 확인
+        if self.object and self.object.name:
+            self.object.delete(save=False)  # save=False로 DB 중복 저장 방지
 
-
-        self.deleted_at = datetime.now()
+        self.deleted_at = timezone.now()
         self.save()
 
 class CardFlag(BaseModel):
