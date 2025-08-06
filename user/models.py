@@ -1,14 +1,24 @@
 from typing import Optional
 
 from django.contrib.auth.models import AbstractUser
+from django.core.files.uploadedfile import UploadedFile
 from django.db import models, transaction
+from uuid_v7.base import uuid7
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.apns import APNS
+from flitz.thumbgen import generate_thumbnail
 from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
 
 # Create your models here.
+
+def profile_image_upload_to(instance, filename):
+    """
+    프로필 이미지의 저장 경로를 생성합니다.
+    파일명은 UUID7을 사용하고, 항상 .jpg로 저장됩니다.
+    """
+    return f"profile_images/{uuid7()}.jpg"
 
 class User(AbstractUser):
     class Meta:
@@ -26,8 +36,7 @@ class User(AbstractUser):
 
     disabled_at = models.DateTimeField(null=True, blank=True)
 
-    profile_image_key = models.CharField(max_length=2048, null=True, blank=True)
-    profile_image_url = models.CharField(max_length=2048, null=True, blank=True)
+    profile_image = models.ImageField(upload_to=profile_image_upload_to, null=True, blank=True)
 
     free_coins = models.IntegerField(default=0)
     paid_coins = models.IntegerField(default=0)
@@ -82,6 +91,20 @@ class User(AbstractUser):
             location.save()
 
         return location
+
+    def set_profile_image(self, image_file: UploadedFile):
+        if not image_file.content_type.startswith(('image/')):
+            raise ValueError("Uploaded file is not an image.")
+
+        # 기존 이미지가 있으면 삭제
+        if self.profile_image:
+            self.profile_image.delete(save=False)
+
+        # 썸네일 생성 후 저장
+        thumbnail = generate_thumbnail(image_file)
+        # 파일명은 upload_to 함수가 자동으로 처리
+        self.profile_image.save('thumbnail.jpg', thumbnail, save=True)
+
 
 
 
