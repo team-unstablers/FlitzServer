@@ -101,6 +101,6 @@ jobs:
         CELERY_RESULT_BACKEND: redis://localhost:6380/0
         FLITZ_HOST: localhost
         # 테스트 환경임을 명시
-        DJANGO_SETTINGS_MODULE: flitz.settings
+        DJANGO_SETTINGS_MODULE: flitz.settings_dev
         FLITZ_TEST: 1
         PYTHONUNBUFFERED: 1
