@@ -6,6 +6,6 @@ from celery import shared_task
 from user.models import User
 
 @shared_task
-def send_push_message(user_id: UUID, title: str, body: str, data: Optional[dict]=None):
+def send_push_message(user_id: UUID, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None):
     user = User.objects.get(id=user_id)
-    user.send_push_message(title, body, data)
+    user.send_push_message(title, body, data, thread_id=thread_id)

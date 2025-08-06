@@ -142,7 +142,7 @@ class APNS:
 
         self.base_url = self.DEV_URL if sandbox else self.PROD_URL
 
-    def send_notification(self, title: str, body: str, device_tokens: List[str], user_info: dict=None):
+    def send_notification(self, title: str, body: str, device_tokens: List[str], user_info: dict=None, thread_id: Optional[str] = None):
         if user_info is None:
             payload = dict()
         else:
@@ -154,6 +154,9 @@ class APNS:
                 "body": body
             }
         }
+
+        if thread_id:
+            payload['aps']['thread-id'] = thread_id
 
         self.send_push(payload=payload, device_tokens=device_tokens)
 

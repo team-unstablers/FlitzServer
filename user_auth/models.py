@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Optional
 
 import jwt
 
@@ -23,13 +24,13 @@ class UserSession(BaseModel):
     expires_at = models.DateTimeField(null=True, blank=True)
     invalidated_at = models.DateTimeField(null=True, blank=True)
 
-    def send_push_message(self, title: str, body: str, data: dict):
+    def send_push_message(self, title: str, body: str, data: dict, thread_id: Optional[str] = None):
         """
         사용자에게 푸시 메시지를 보냅니다.
         """
 
         apns = APNS.default()
-        apns.send_notification(title, body, [self.apns_token], data)
+        apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id)
 
     def create_token(self) -> str:
         token = jwt.encode({

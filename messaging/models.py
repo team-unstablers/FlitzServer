@@ -106,7 +106,8 @@ class DirectMessage(BaseModel):
                     'type': 'message',
                     'user_id': str(self.sender.id),
                     'conversation_id': str(self.conversation.id)
-                }
+                },
+                thread_id=str(self.conversation.id)
             )
 
 

@@ -58,7 +58,7 @@ class User(AbstractUser):
         self.phone_number = normalized_phone_number
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
-    def send_push_message(self, title: str, body: str, data: Optional[dict]=None):
+    def send_push_message(self, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None):
         """
         사용자에게 푸시 메시지를 보냅니다.
 
@@ -68,7 +68,7 @@ class User(AbstractUser):
         if not self.primary_session:
             return
 
-        self.primary_session.send_push_message(title, body, data)
+        self.primary_session.send_push_message(title, body, data, thread_id=thread_id)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None):
         from location.models import UserLocation
