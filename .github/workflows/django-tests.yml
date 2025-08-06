@@ -9,22 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis:7.4.2
-        ports:
-          - 6380:6379
-      
-      minio:
-        image: bitnami/minio:latest
-        ports:
-          - 9000:9000
-          - 9001:9001
-        env:
-          MINIO_ROOT_USER: flitzdev
-          MINIO_ROOT_PASSWORD: flitzdev123
-    
+
     steps:
     - uses: actions/checkout@v4
     
@@ -50,44 +35,14 @@ jobs:
     
     - name: Install dependencies
       run: poetry install --no-interaction
-    
-    - name: Cache MinIO Client
-      id: cache-mc
-      uses: actions/cache@v4
-      with:
-        path: ~/mc
-        key: ${{ runner.os }}-minio-client-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-minio-client-
 
-    - name: Download MinIO Client if not cached
-      if: steps.cache-mc.outputs.cache-hit != 'true'
+    - name: Configure devenv
       run: |
-        # MinIO 클라이언트 바이너리 다운로드 및 설치
-        mkdir -p ~/mc
-        wget https://dl.min.io/client/mc/release/linux-amd64/mc -O ~/mc/mc
-        chmod +x ~/mc/mc
+        cd flitz-devenv
+        sudo docker compose pull
+        sudo docker compose up -d
+        cd ..
 
-    - name: Configure MinIO
-      run: |
-        # 이미 캐싱된 MinIO 클라이언트 사용
-        export PATH=$PATH:~/mc
-        
-        # 여러 번 시도하여 MinIO 연결 안정성 확보
-        for i in {1..5}; do
-          if mc config host add myminio http://localhost:9000 flitzdev flitzdev123; then
-            break
-          fi
-          echo "Attempt $i failed. Retrying in 5 seconds..."
-          sleep 5
-        done
-        
-        # 버킷 생성 및 권한 설정
-        mc mb myminio/flitz --ignore-existing || echo "Bucket flitz already exists or creation failed"
-        mc mb myminio/flitz-server-static --ignore-existing || echo "Bucket flitz-server-static already exists or creation failed"
-        mc anonymous set download myminio/flitz || echo "Setting anonymous access for flitz failed"
-        mc anonymous set download myminio/flitz-server-static || echo "Setting anonymous access for flitz-server-static failed"
-    
     - name: Run tests
       run: |
         # 테스트 실행 전 환경 확인
