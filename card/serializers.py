@@ -24,6 +24,10 @@ class PublicCardSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'title', 'content', 'created_at', 'updated_at')
 
     user = PublicSimpleUserSerializer()
+    content = serializers.SerializerMethodField(method_name='get_content')
+
+    def get_content(self, obj: Card):
+        return obj.get_content_with_url()
 
 
 class PublicCardListSerializer(serializers.ModelSerializer):

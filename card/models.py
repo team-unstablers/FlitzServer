@@ -1,3 +1,5 @@
+from typing import Optional
+
 from dacite import from_dict
 from django.core.files.storage import default_storage, Storage
 from django.db import models, transaction
@@ -6,7 +8,7 @@ from django.utils import timezone
 
 from uuid_v7.base import uuid7
 
-from card.objdef import CardObject
+from card.objdef import CardObject, AssetReference, ImageElement
 from flitz.models import BaseModel
 from location.models import LocationDistanceMixin
 from user.models import User
@@ -109,6 +111,29 @@ class Card(BaseModel):
             for reference in references_in_db:
                 if reference.id not in current_references_ids:
                     reference.delete_asset()
+
+    def get_content_with_url(self) -> dict:
+        asset_references_queryset = self.asset_references.filter(deleted_at__isnull=True)
+        card_obj = from_dict(data_class=CardObject, data=self.content)
+
+        def resolve_asset_url(asset: Optional[AssetReference]) -> Optional[str]:
+            if asset is None:
+                return None
+
+            asset_reference = asset_references_queryset.filter(id=asset.id).first()
+            if asset_reference is None or (not asset_reference.object.name):
+                return None
+
+            return asset_reference.object.url
+
+        if card_obj.background:
+            card_obj.background.public_url = resolve_asset_url(card_obj.background)
+
+        for element in card_obj.elements:
+            if isinstance(element, ImageElement):
+                element.source.public_url = resolve_asset_url(element.source)
+
+        return card_obj.as_dict()
 
 class UserCardAsset(BaseModel):
     class AssetType(models.TextChoices):
