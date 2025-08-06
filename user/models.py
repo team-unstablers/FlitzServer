@@ -97,7 +97,7 @@ class User(AbstractUser):
         return location
 
     def set_profile_image(self, image_file: UploadedFile):
-        if not image_file.content_type.startswith(('image/')):
+        if not image_file.content_type.startswith('image/'):
             raise ValueError("Uploaded file is not an image.")
 
         # 기존 이미지가 있으면 삭제

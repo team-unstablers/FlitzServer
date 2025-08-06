@@ -214,7 +214,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 object=sanitized_file,
                 thumbnail=thumbnail,
                 mimetype=file.content_type,
-                size=sanitized_file.size
+                size=file.size
             )
 
             content = DirectMessageAttachmentContent(
