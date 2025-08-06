@@ -127,7 +127,9 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         return PublicCardSerializer
 
     def get_queryset(self):
-        queryset = Card.objects.filter(deleted_at=None).select_related('user')
+        queryset = Card.objects.filter(deleted_at=None) \
+            .select_related('user') \
+            .prefetch_related('asset_references')
 
         if self.action == 'list':
             queryset = queryset.filter(user=self.request.user).defer('content')
