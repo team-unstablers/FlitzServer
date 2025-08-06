@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from card.objdef import CardObject, CardSchemaVersion, AssetReference
 from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer, \
-    CardDistributionSerializer
+    CardDistributionSerializer, PublicWriteOnlyCardSerializer
 from card.models import Card, UserCardAsset, CardDistribution, CardVote
 from flitz.pagination import CursorPagination
 from user.models import User, UserLike
@@ -124,6 +124,9 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return PublicCardListSerializer
 
+        if self.action == 'update':
+            return PublicWriteOnlyCardSerializer
+
         return PublicCardSerializer
 
     def get_queryset(self):
@@ -150,7 +153,8 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
-        if self.get_object().user != request.user:
+        card: Card = self.get_object()
+        if card.user != request.user:
             raise UnsupportedOperationException()
 
         data = request.data
@@ -164,9 +168,12 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         if not card_obj.sanity_check():
             raise UnsupportedOperationException()
 
-        data['content'] = card_obj.as_dict()
+        # super().update(request, *args, **kwargs)
+        card.content = card_obj.as_dict()
+        card.save()
 
-        return super().update(request, *args, **kwargs)
+        serializer = PublicCardSerializer(self.get_object())
+        return Response(serializer.data)
 
     @action(detail=True, methods=['PUT'], url_path='set-as-main')
     def set_card_as_main(self, request: Request, pk, *args, **kwargs):

@@ -15,6 +15,17 @@ class PublicSelfUserCardAssetSerializer(serializers.ModelSerializer):
         model = UserCardAsset
         fields = ('id', 'type', 'public_url', 'mimetype', 'size', 'created_at', 'updated_at')
 
+class PublicWriteOnlyCardSerializer(serializers.ModelSerializer):
+    """
+    카드 정보를 fetch할 때 사용되는 serializer
+    """
+    class Meta:
+        model = Card
+        fields = ('id', 'user', 'title', 'content', 'created_at', 'updated_at')
+
+    user = PublicSimpleUserSerializer()
+
+
 class PublicCardSerializer(serializers.ModelSerializer):
     """
     카드 정보를 fetch할 때 사용되는 serializer
