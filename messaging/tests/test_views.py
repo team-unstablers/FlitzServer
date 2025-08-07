@@ -112,7 +112,7 @@ class DirectMessageViewSetTests(APITestCase):
         # 이벤트 데이터 확인
         event_data = call_args[1]
         self.assertEqual(event_data['type'], 'dm_message')
-        self.assertEqual(event_data['message']['sender_id'], str(self.user1.id))
+        self.assertEqual(event_data['message']['sender'], str(self.user1.id))
         self.assertEqual(event_data['message']['content']['text'], 'Test message via API')
     
     def test_list_messages(self):
