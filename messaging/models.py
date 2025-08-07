@@ -158,6 +158,10 @@ class DirectMessageAttachment(BaseModel):
 
     mimetype = models.CharField(max_length=128)
     size = models.IntegerField()
+
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def delete_attachment(self):

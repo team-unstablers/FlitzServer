@@ -38,6 +38,9 @@ class DirectMessageAttachmentContent:
     attachment_type: str
     attachment_id: str
 
+    width: int
+    height: int
+
     public_url: Optional[str]
     thumbnail_url: Optional[str]
 

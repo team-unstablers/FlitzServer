@@ -3,7 +3,7 @@ from django.core.files.temp import NamedTemporaryFile
 
 from PIL import Image
 
-def generate_thumbnail(input_file: File, max_height: int = 768, jpeg_quality: int = 85) -> File:
+def generate_thumbnail(input_file: File, max_height: int = 768, jpeg_quality: int = 85) -> (File, (int, int)):
     """
     주어진 입력 파일에 대해 썸네일을 생성합니다.
     원본의 aspect ratio를 유지하며, 높이가 max_height를 초과하는 경우에만 리사이징합니다.
@@ -56,4 +56,4 @@ def generate_thumbnail(input_file: File, max_height: int = 768, jpeg_quality: in
     resized_image.save(temp_file, format="JPEG", quality=jpeg_quality, optimize=True)
     
     temp_file.seek(0)
-    return File(temp_file)
+    return File(temp_file), (resized_image.width, resized_image.height)

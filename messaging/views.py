@@ -16,7 +16,7 @@ from flitz.exceptions import UnsupportedOperationException
 from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, DirectMessageParticipant
 from messaging.objdef import DirectMessageAttachmentContent
 from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer, \
-    DirectMessageReadOnlySerializer
+    DirectMessageReadOnlySerializer, DirectMessageAttachmentSerializer
 from flitz.thumbgen import generate_thumbnail
 
 
@@ -164,6 +164,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
 
 class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = DirectMessageAttachmentSerializer
 
     def get_conversation_id(self):
         return self.kwargs['conversation_id']
@@ -179,8 +180,8 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageAttachment.objects.filter(
-            sender=self.request.user,
             conversation__id=self.get_conversation_id(),
+            conversation__participants__user=self.request.user,
 
             deleted_at=None
         )
@@ -207,16 +208,19 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             # TODO: resize image and remove EXIF data
             sanitized_file = file
-            thumbnail = generate_thumbnail(file)
+            (thumbnail, size) = generate_thumbnail(file, 1280)
 
             attachment = DirectMessageAttachment.objects.create(
                 sender=self.request.user,
                 conversation=conversation,
                 type=attachment_type,
-                object=sanitized_file,
+                object=thumbnail,
                 thumbnail=thumbnail,
                 mimetype=file.content_type,
-                size=file.size
+                size=thumbnail.size,
+
+                width=size[0],
+                height=size[1]
             )
 
             content = DirectMessageAttachmentContent(
@@ -224,6 +228,9 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
                 attachment_type='image',
                 attachment_id=str(attachment.id),  # UUID를 문자열로 변환
+
+                width=size[0],
+                height=size[1],
 
                 # 굳이 원본을 보여줄 필요는 없음
                 public_url=attachment.thumbnail.url,
