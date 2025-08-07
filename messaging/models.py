@@ -82,14 +82,20 @@ class DirectMessage(BaseModel):
 
         notification_title = f'{self.sender.display_name} 님의 새 메시지'
 
+        print(content_type)
+
         if content_type == 'text':
             notification_body = content.get('text')
-        elif content_type == 'image':
-            notification_body = f'{self.sender.display_name} 님이 이미지를 보냈습니다.'
-        elif content_type == 'video':
-            notification_body = f'{self.sender.display_name} 님이 동영상을 보냈습니다.'
-        elif content_type == 'audio':
-            notification_body = f'{self.sender.display_name} 님이 음성 메시지를 보냈습니다.'
+        elif content_type == 'attachment':
+            attachment_type = content.get('attachment_type')
+            if attachment_type == 'image':
+                notification_body = f'{self.sender.display_name} 님이 이미지를 보냈습니다.'
+            elif attachment_type == 'video':
+                notification_body = f'{self.sender.display_name} 님이 동영상을 보냈습니다.'
+            elif attachment_type == 'audio':
+                notification_body = f'{self.sender.display_name} 님이 음성 메시지를 보냈습니다.'
+            else:
+                notification_body = f'{self.sender.display_name} 님이 새 메시지를 보냈습니다.'
         else:
             notification_body = f'{self.sender.display_name} 님이 새 메시지를 보냈습니다.'
 
