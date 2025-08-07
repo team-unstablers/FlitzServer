@@ -15,7 +15,8 @@ from flitz.exceptions import UnsupportedOperationException
 
 from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, DirectMessageParticipant
 from messaging.objdef import DirectMessageAttachmentContent
-from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer
+from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer, \
+    DirectMessageReadOnlySerializer
 from flitz.thumbgen import generate_thumbnail
 
 
@@ -58,7 +59,6 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
 class DirectMessageViewSet(viewsets.ModelViewSet):
 
-    serializer_class = DirectMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_conversation_id(self):
@@ -69,6 +69,11 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
             return DirectMessageConversation.objects.get(id__exact=self.get_conversation_id())
         except:
             raise Http404()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DirectMessageSerializer
+        return DirectMessageReadOnlySerializer
 
     def get_queryset(self):
         if not self.get_conversation().participants.filter(user=self.request.user).exists():
@@ -93,7 +98,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{created_instance.conversation_id}'
 
-        message_data = self.get_serializer(instance=created_instance).data
+        message_data = DirectMessageReadOnlySerializer(instance=created_instance).data
 
         async_to_sync(channel_layer.group_send)(
             group_name,
@@ -240,7 +245,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{conversation.id}'
 
-        message_data = DirectMessageSerializer(instance=message).data
+        message_data = DirectMessageReadOnlySerializer(instance=message).data
 
         async_to_sync(channel_layer.group_send)(
             group_name,

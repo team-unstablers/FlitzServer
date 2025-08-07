@@ -68,6 +68,13 @@ class DirectMessageSerializer(serializers.ModelSerializer):
         fields = (*read_only_fields, 'content', 'sent_by', 'parent_conversation', 'created_at', 'updated_at')
 
 
+class DirectMessageReadOnlySerializer(DirectMessageSerializer):
+    content = serializers.SerializerMethodField(method_name='get_content')
+
+    def get_content(self, obj: DirectMessage):
+        return obj.get_content_with_url()
+
+
 class DirectMessageAttachmentSerializer(serializers.ModelSerializer):
     """
     DM 첨부파일 정보를 fetch할 때 사용되는 serializer
@@ -95,7 +102,7 @@ class DirectMessageConversationSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
-    latest_message = DirectMessageSerializer(read_only=True)
+    latest_message = DirectMessageReadOnlySerializer(read_only=True)
 
     participants = DirectMessageParticipantSerializer(
         many=True,
@@ -142,7 +149,7 @@ class DirectMessageFlagSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    message = DirectMessageSerializer(
+    message = DirectMessageReadOnlySerializer(
         read_only=True
     )
     target_message = serializers.PrimaryKeyRelatedField(

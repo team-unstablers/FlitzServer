@@ -6,6 +6,7 @@ from django.contrib.postgres.indexes import GinIndex
 from uuid_v7.base import uuid7
 
 from flitz.models import BaseModel
+from messaging.objdef import load_direct_message_content
 from user.models import User
 
 from user import tasks as user_tasks
@@ -115,6 +116,29 @@ class DirectMessage(BaseModel):
                 },
                 thread_id=str(self.conversation.id)
             )
+
+    def get_content_with_url(self) -> dict:
+        if self.content.get('type') != 'attachment':
+            return self.content
+
+        content = load_direct_message_content(self.content)
+
+        # TODO: DirectMessageAttachment에 DirectMessage와 FK 추가해둬야 함 이거 나중에 존나느려짐;
+        attachment = self.conversation.attachments.filter(id=content.attachment_id, deleted_at__isnull=True).first()
+        if not attachment:
+            return content.as_dict()
+
+        if attachment.object.name:
+            content.public_url = attachment.object.url
+        else:
+            content.public_url = None
+
+        if attachment.thumbnail.name:
+            content.thumbnail_url = attachment.thumbnail.url
+        else:
+            content.thumbnail_url = None
+
+        return content.as_dict()
 
 
 class DirectMessageAttachment(BaseModel):
