@@ -50,7 +50,7 @@ jobs:
         echo "Django version: $(poetry run python -c 'import django; print(django.__version__)')"
         
         # 테스트 실행 (자세한 출력 옵션 추가)
-        poetry run python manage.py test --verbosity=2
+        poetry run python manage.py test --verbosity=2 --parallel=4
       env:
         CELERY_BROKER_URL: redis://localhost:6380/0
         CELERY_RESULT_BACKEND: redis://localhost:6380/0
