@@ -239,14 +239,9 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         # 첨부파일 메시지에 대한 실시간 이벤트 발송
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{conversation.id}'
-        
-        message_data = {
-            'id': str(message.id),
-            'content': message.content,
-            'sender_id': str(message.sender_id),
-            'created_at': message.created_at.isoformat()
-        }
-        
+
+        message_data = DirectMessageSerializer(instance=message).data
+
         async_to_sync(channel_layer.group_send)(
             group_name,
             {
@@ -255,6 +250,6 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
             }
         )
 
-        # 이게 과연 맞는지?
-        serializer = DirectMessageSerializer(message)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        message.send_push_notification()
+
+        return Response(message_data, status=status.HTTP_201_CREATED)
