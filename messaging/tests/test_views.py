@@ -212,7 +212,7 @@ class DirectMessageAttachmentViewSetTests(APITestCase):
         from io import BytesIO
         from django.core.files.base import ContentFile
         thumbnail_content = BytesIO(b'fake thumbnail content')
-        mock_generate_thumbnail.return_value = ContentFile(thumbnail_content.getvalue(), name='thumbnail.jpg')
+        mock_generate_thumbnail.return_value = (ContentFile(thumbnail_content.getvalue(), name='thumbnail.jpg'), (1280, 1280))
         
         # 테스트 이미지 파일 생성
         from django.core.files.uploadedfile import SimpleUploadedFile
