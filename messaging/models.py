@@ -83,8 +83,6 @@ class DirectMessage(BaseModel):
 
         notification_title = f'{self.sender.display_name} 님의 새 메시지'
 
-        print(content_type)
-
         if content_type == 'text':
             notification_body = content.get('text')
         elif content_type == 'attachment':
@@ -118,15 +116,12 @@ class DirectMessage(BaseModel):
             )
 
     def get_content_with_url(self) -> dict:
-        if self.content.get('type') != 'attachment':
+        if self.content.get('type') != 'attachment' or not hasattr(self, 'attachment'):
             return self.content
 
         content = load_direct_message_content(self.content)
 
-        # TODO: DirectMessageAttachment에 DirectMessage와 FK 추가해둬야 함 이거 나중에 존나느려짐;
-        attachment = self.conversation.attachments.filter(id=content.attachment_id, deleted_at__isnull=True).first()
-        if not attachment:
-            return content.as_dict()
+        attachment = self.attachment
 
         if attachment.object.name:
             content.public_url = attachment.object.url
@@ -149,6 +144,7 @@ class DirectMessageAttachment(BaseModel):
         OTHER = 'other'
 
     conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='attachments')
+    message = models.OneToOneField(DirectMessage, on_delete=models.CASCADE, related_name='attachment', null=True, blank=True)
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
 
     type = models.CharField(max_length=32, choices=AttachmentType.choices)

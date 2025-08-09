@@ -244,6 +244,8 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 content=asdict(content)
             )
 
+            attachment.message = message
+            attachment.save()
 
         conversation.latest_message = message
         conversation.save()
