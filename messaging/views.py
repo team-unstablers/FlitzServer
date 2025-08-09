@@ -15,7 +15,8 @@ from flitz.exceptions import UnsupportedOperationException
 
 from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, DirectMessageParticipant
 from messaging.objdef import DirectMessageAttachmentContent
-from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer
+from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer, \
+    DirectMessageReadOnlySerializer, DirectMessageAttachmentSerializer
 from flitz.thumbgen import generate_thumbnail
 
 
@@ -26,7 +27,9 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageConversation.objects \
-            .filter(deleted_at__isnull=True, participants__user=self.request.user)
+            .filter(deleted_at__isnull=True, participants__user=self.request.user) \
+            .prefetch_related('participants') \
+            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -58,7 +61,6 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
 class DirectMessageViewSet(viewsets.ModelViewSet):
 
-    serializer_class = DirectMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_conversation_id(self):
@@ -70,12 +72,18 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         except:
             raise Http404()
 
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DirectMessageSerializer
+        return DirectMessageReadOnlySerializer
+
     def get_queryset(self):
         if not self.get_conversation().participants.filter(user=self.request.user).exists():
             raise Http404()
 
         return DirectMessage.objects \
-            .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True)
+            .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True) \
+            .select_related('sender', 'attachment')
 
     def create(self, request, *args, **kwargs):
         request.data['sent_by'] = self.request.user.id
@@ -93,7 +101,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{created_instance.conversation_id}'
 
-        message_data = self.get_serializer(instance=created_instance).data
+        message_data = DirectMessageReadOnlySerializer(instance=created_instance).data
 
         async_to_sync(channel_layer.group_send)(
             group_name,
@@ -159,6 +167,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
 
 class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = DirectMessageAttachmentSerializer
 
     def get_conversation_id(self):
         return self.kwargs['conversation_id']
@@ -174,8 +183,8 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageAttachment.objects.filter(
-            sender=self.request.user,
             conversation__id=self.get_conversation_id(),
+            conversation__participants__user=self.request.user,
 
             deleted_at=None
         )
@@ -202,16 +211,19 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             # TODO: resize image and remove EXIF data
             sanitized_file = file
-            thumbnail = generate_thumbnail(file)
+            (thumbnail, size) = generate_thumbnail(file, 1280)
 
             attachment = DirectMessageAttachment.objects.create(
                 sender=self.request.user,
                 conversation=conversation,
                 type=attachment_type,
-                object=sanitized_file,
+                object=thumbnail,
                 thumbnail=thumbnail,
                 mimetype=file.content_type,
-                size=file.size
+                size=thumbnail.size,
+
+                width=size[0],
+                height=size[1]
             )
 
             content = DirectMessageAttachmentContent(
@@ -219,6 +231,9 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
 
                 attachment_type='image',
                 attachment_id=str(attachment.id),  # UUID를 문자열로 변환
+
+                width=size[0],
+                height=size[1],
 
                 # 굳이 원본을 보여줄 필요는 없음
                 public_url=attachment.thumbnail.url,
@@ -232,6 +247,8 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
                 content=asdict(content)
             )
 
+            attachment.message = message
+            attachment.save()
 
         conversation.latest_message = message
         conversation.save()
@@ -240,7 +257,7 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         channel_layer = get_channel_layer()
         group_name = f'direct_message_{conversation.id}'
 
-        message_data = DirectMessageSerializer(instance=message).data
+        message_data = DirectMessageReadOnlySerializer(instance=message).data
 
         async_to_sync(channel_layer.group_send)(
             group_name,

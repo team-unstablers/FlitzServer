@@ -6,6 +6,7 @@ from django.contrib.postgres.indexes import GinIndex
 from uuid_v7.base import uuid7
 
 from flitz.models import BaseModel
+from messaging.objdef import load_direct_message_content
 from user.models import User
 
 from user import tasks as user_tasks
@@ -82,8 +83,6 @@ class DirectMessage(BaseModel):
 
         notification_title = f'{self.sender.display_name} 님의 새 메시지'
 
-        print(content_type)
-
         if content_type == 'text':
             notification_body = content.get('text')
         elif content_type == 'attachment':
@@ -116,6 +115,26 @@ class DirectMessage(BaseModel):
                 thread_id=str(self.conversation.id)
             )
 
+    def get_content_with_url(self) -> dict:
+        if self.content.get('type') != 'attachment' or not hasattr(self, 'attachment'):
+            return self.content
+
+        content = load_direct_message_content(self.content)
+
+        attachment = self.attachment
+
+        if attachment.object.name:
+            content.public_url = attachment.object.url
+        else:
+            content.public_url = None
+
+        if attachment.thumbnail.name:
+            content.thumbnail_url = attachment.thumbnail.url
+        else:
+            content.thumbnail_url = None
+
+        return content.as_dict()
+
 
 class DirectMessageAttachment(BaseModel):
     class AttachmentType(models.TextChoices):
@@ -125,6 +144,7 @@ class DirectMessageAttachment(BaseModel):
         OTHER = 'other'
 
     conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='attachments')
+    message = models.OneToOneField(DirectMessage, on_delete=models.CASCADE, related_name='attachment', null=True, blank=True)
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
 
     type = models.CharField(max_length=32, choices=AttachmentType.choices)
@@ -134,6 +154,10 @@ class DirectMessageAttachment(BaseModel):
 
     mimetype = models.CharField(max_length=128)
     size = models.IntegerField()
+
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def delete_attachment(self):

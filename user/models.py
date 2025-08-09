@@ -103,7 +103,7 @@ class User(AbstractUser):
             self.profile_image.delete(save=False)
 
         # 썸네일 생성 후 저장
-        thumbnail = generate_thumbnail(image_file)
+        (thumbnail, size) = generate_thumbnail(image_file)
         # 파일명은 upload_to 함수가 자동으로 처리
         self.profile_image.save('thumbnail.jpg', thumbnail, save=True)
 

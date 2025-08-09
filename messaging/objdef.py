@@ -28,6 +28,9 @@ class DirectMessageTextContent:
     type: DirectMessageTextContentType
     text: str
 
+    def as_dict(self) -> dict:
+        return asdict(self)
+
 @dataclass
 class DirectMessageAttachmentContent:
     type: DirectMessageAttachmentContentType
@@ -35,8 +38,14 @@ class DirectMessageAttachmentContent:
     attachment_type: str
     attachment_id: str
 
+    width: int
+    height: int
+
     public_url: Optional[str]
     thumbnail_url: Optional[str]
+
+    def as_dict(self) -> dict:
+        return asdict(self)
 
 DirectMessageContent = DirectMessageTextContent | DirectMessageAttachmentContent
 
