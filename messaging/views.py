@@ -27,7 +27,9 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DirectMessageConversation.objects \
-            .filter(deleted_at__isnull=True, participants__user=self.request.user)
+            .filter(deleted_at__isnull=True, participants__user=self.request.user) \
+            .prefetch_related('participants') \
+            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -80,7 +82,8 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
             raise Http404()
 
         return DirectMessage.objects \
-            .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True)
+            .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True) \
+            .select_related('sender', 'attachment')
 
     def create(self, request, *args, **kwargs):
         request.data['sent_by'] = self.request.user.id
