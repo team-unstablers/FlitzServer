@@ -52,13 +52,21 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def profile_image_url(self) -> Optional[str]:
+        if not self.profile_image.name:
+            return None
+
+        return self.profile_image.url
+
+
     def set_phone_number(self, phone_number: str):
         normalized_phone_number = normalize_phone_number(phone_number)
 
         self.phone_number = normalized_phone_number
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
-    def send_push_message(self, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None):
+    def send_push_message(self, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
         """
         사용자에게 푸시 메시지를 보냅니다.
 
@@ -68,7 +76,7 @@ class User(AbstractUser):
         if not self.primary_session:
             return
 
-        self.primary_session.send_push_message(title, body, data, thread_id=thread_id)
+        self.primary_session.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None):
         from location.models import UserLocation
@@ -160,8 +168,10 @@ class UserMatch(BaseModel):
             {
                 'type': 'match',
                 'user_id': str(user_b.id),
+                'user_profile_image_url': user_b.profile_image_url,
                 'conversation_id': conversation.id
-            }
+            },
+            mutable_content=True
         )
 
         user_tasks.send_push_message.delay_on_commit(
@@ -171,8 +181,10 @@ class UserMatch(BaseModel):
             {
                 'type': 'match',
                 'user_id': str(user_a.id),
+                'user_profile_image_url': user_a.profile_image_url,
                 'conversation_id': conversation.id
-            }
+            },
+            mutable_content=True
         )
 
 class Notification(BaseModel):

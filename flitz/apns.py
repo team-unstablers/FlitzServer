@@ -142,7 +142,7 @@ class APNS:
 
         self.base_url = self.DEV_URL if sandbox else self.PROD_URL
 
-    def send_notification(self, title: str, body: str, device_tokens: List[str], user_info: dict=None, thread_id: Optional[str] = None):
+    def send_notification(self, title: str, body: str, device_tokens: List[str], user_info: dict=None, thread_id: Optional[str] = None, mutable_content: bool = False):
         if user_info is None:
             payload = dict()
         else:
@@ -152,7 +152,9 @@ class APNS:
             "alert": {
                 "title": title,
                 "body": body
-            }
+            },
+
+            'mutable-content': 1 if mutable_content else 0
         }
 
         if thread_id:
