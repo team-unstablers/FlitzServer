@@ -34,5 +34,6 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'display_name', 'profile_image_url', 'free_coins', 'paid_coins')
+        read_only_fields = ('id', 'username', 'profile_image_url', 'free_coins', 'paid_coins')
 
 
