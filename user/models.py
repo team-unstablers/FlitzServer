@@ -41,6 +41,13 @@ class User(AbstractUser):
 
     profile_image = models.ImageField(upload_to=profile_image_upload_to, null=True, blank=True)
 
+    title = models.CharField(max_length=20, null=False, blank=True, default='')
+
+    bio = models.CharField(max_length=600, null=False, blank=True, default='')
+    hashtags = models.JSONField(default=list, blank=True, null=False)
+
+    birth_date = models.DateField(null=True, blank=True)
+
     free_coins = models.IntegerField(default=0)
     paid_coins = models.IntegerField(default=0)
 
