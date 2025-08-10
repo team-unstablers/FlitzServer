@@ -86,8 +86,8 @@ class DirectMessage(BaseModel):
         if content_type == 'text':
             notification_body = content.get('text')
 
-            if len(notification_body) > 80:
-                notification_body = notification_body[:80] + '…'
+            if len(notification_body) > 240:
+                notification_body = notification_body[:240] + '…'
 
         elif content_type == 'attachment':
             attachment_type = content.get('attachment_type')
