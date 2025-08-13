@@ -1,4 +1,3 @@
-import enum
 from typing import Optional
 
 from django.contrib.auth.models import AbstractUser
