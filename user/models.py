@@ -156,7 +156,7 @@ class UserIdentity(BaseModel):
         다른 사용자의 아이덴티티가 현재 사용자의 선호에 맞는지 확인합니다.
         """
 
-        is_preferred = self.preferred_genders & other.gender != 0
+        is_preferred = (self.preferred_genders & other.gender) != 0
 
         if not is_preferred:
             # 선호하는 성별이 아니면 매칭 불가
