@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from unittest.mock import patch, MagicMock
 
-from user.models import User
+from user.models import User, UserIdentity, UserGenderBit
 from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.views import FlitzWaveViewSet
 from card.models import Card
@@ -312,3 +312,185 @@ class FlitzWaveViewSetTest(TestCase):
         MockUserMatcher.assert_called_once()
         mock_matcher_instance.sanity_check.assert_called_once()
         mock_matcher_instance.try_match.assert_not_called()  # sanity_check 실패로 try_match는 호출되지 않음
+    
+    @patch('location.views.UserMatcher')
+    def test_report_discovery_with_prerequisite_check_failed(self, MockUserMatcher):
+        """
+        prerequisite_check가 실패하는 경우 디스커버리 보고 테스트
+        """
+        # UserMatcher 모킹 설정
+        mock_matcher_instance = MagicMock()
+        mock_matcher_instance.sanity_check.return_value = True  # sanity_check 성공
+        mock_matcher_instance.prerequisite_check.return_value = False  # prerequisite_check 실패
+        MockUserMatcher.return_value = mock_matcher_instance
+        
+        # 세션 생성
+        session = DiscoverySession.objects.create(
+            user=self.user,
+            is_active=True
+        )
+        
+        # 다른 사용자 생성
+        other_user = User.objects.create_user(
+            username="otheruser",
+            password="testpass123",
+            display_name="Other User"
+        )
+        
+        # 다른 사용자의 세션 생성
+        other_session = DiscoverySession.objects.create(
+            user=other_user,
+            is_active=True
+        )
+        
+        # 디스커버리 보고 요청
+        report_data = {
+            'session_id': str(session.id),
+            'discovered_session_id': str(other_session.id),
+            'latitude': 37.5665,
+            'longitude': 126.9780
+        }
+        
+        with patch.object(User, 'update_location'):
+            response = self.client.post(self.report_discovery_url, report_data, format='json')
+        
+        # 응답 검증
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_success'])
+        
+        # UserMatcher 호출 확인
+        MockUserMatcher.assert_called_once()
+        mock_matcher_instance.sanity_check.assert_called_once()
+        mock_matcher_instance.prerequisite_check.assert_called_once()
+        mock_matcher_instance.try_match.assert_not_called()  # prerequisite_check 실패로 try_match는 호출되지 않음
+    
+    @patch('location.views.UserMatcher')
+    def test_report_discovery_with_prerequisite_check_gender_mismatch(self, MockUserMatcher):
+        """
+        성별 선호가 맞지 않아 prerequisite_check가 실패하는 경우 테스트
+        """
+        # UserMatcher 모킹 설정
+        mock_matcher_instance = MagicMock()
+        mock_matcher_instance.sanity_check.return_value = True
+        mock_matcher_instance.prerequisite_check.return_value = False
+        MockUserMatcher.return_value = mock_matcher_instance
+        
+        # 세션 생성
+        session = DiscoverySession.objects.create(
+            user=self.user,
+            is_active=True
+        )
+        
+        # 다른 사용자 생성
+        other_user = User.objects.create_user(
+            username="otheruser",
+            password="testpass123",
+            display_name="Other User"
+        )
+        
+        # 성별 선호가 맞지 않는 Identity 생성
+        UserIdentity.objects.create(
+            user=self.user,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN  # 남성 선호
+        )
+        
+        UserIdentity.objects.create(
+            user=other_user,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.WOMAN  # 여성 선호 (매칭 불가)
+        )
+        
+        # 다른 사용자의 세션 생성
+        other_session = DiscoverySession.objects.create(
+            user=other_user,
+            is_active=True
+        )
+        
+        # 디스커버리 보고 요청
+        report_data = {
+            'session_id': str(session.id),
+            'discovered_session_id': str(other_session.id),
+            'latitude': 37.5665,
+            'longitude': 126.9780
+        }
+        
+        with patch.object(User, 'update_location'):
+            response = self.client.post(self.report_discovery_url, report_data, format='json')
+        
+        # 응답 검증
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_success'])
+        
+        # UserMatcher 호출 확인
+        MockUserMatcher.assert_called_once()
+        mock_matcher_instance.sanity_check.assert_called_once()
+        mock_matcher_instance.prerequisite_check.assert_called_once()
+        mock_matcher_instance.try_match.assert_not_called()
+    
+    @patch('location.views.UserMatcher')
+    def test_report_discovery_with_prerequisite_check_trans_safe_match(self, MockUserMatcher):
+        """
+        트랜스젠더 안전 매칭 조건으로 prerequisite_check가 실패하는 경우 테스트
+        """
+        # UserMatcher 모킹 설정
+        mock_matcher_instance = MagicMock()
+        mock_matcher_instance.sanity_check.return_value = True
+        mock_matcher_instance.prerequisite_check.return_value = False
+        MockUserMatcher.return_value = mock_matcher_instance
+        
+        # 세션 생성
+        session = DiscoverySession.objects.create(
+            user=self.user,
+            is_active=True
+        )
+        
+        # 다른 사용자 생성
+        other_user = User.objects.create_user(
+            username="otheruser",
+            password="testpass123",
+            display_name="Other User"
+        )
+        
+        # 트랜스젠더 안전 매칭 조건 설정
+        UserIdentity.objects.create(
+            user=self.user,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            is_trans=True,
+            trans_prefers_safe_match=True  # 안전 매칭 필요
+        )
+        
+        UserIdentity.objects.create(
+            user=other_user,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            welcomes_trans=False  # 트랜스 환영하지 않음 (매칭 불가)
+        )
+        
+        # 다른 사용자의 세션 생성
+        other_session = DiscoverySession.objects.create(
+            user=other_user,
+            is_active=True
+        )
+        
+        # 디스커버리 보고 요청
+        report_data = {
+            'session_id': str(session.id),
+            'discovered_session_id': str(other_session.id),
+            'latitude': 37.5665,
+            'longitude': 126.9780
+        }
+        
+        with patch.object(User, 'update_location'):
+            response = self.client.post(self.report_discovery_url, report_data, format='json')
+        
+        # 응답 검증
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_success'])
+        
+        # UserMatcher 호출 확인
+        MockUserMatcher.assert_called_once()
+        mock_matcher_instance.sanity_check.assert_called_once()
+        mock_matcher_instance.prerequisite_check.assert_called_once()
+        mock_matcher_instance.try_match.assert_not_called()  # 안전 매칭 조건 불충족으로 try_match 호출 안 됨

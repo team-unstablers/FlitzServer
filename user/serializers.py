@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from user.models import User
+from user.models import User, UserIdentity
+
 
 class PublicUserSerializer(serializers.ModelSerializer):
     """
@@ -64,3 +65,11 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
 
 
+class SelfUserIdentitySerializer(serializers.ModelSerializer):
+    """
+    자신의 정체성 / 선호 정보를 fetch하거나 수정할 때 사용되는 serializer
+    """
+
+    class Meta:
+        model = UserIdentity
+        fields = ('gender', 'is_trans', 'display_trans_to_others', 'preferred_genders', 'welcomes_trans', 'trans_prefers_safe_match')

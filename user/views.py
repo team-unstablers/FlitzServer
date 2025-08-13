@@ -6,8 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from flitz.thumbgen import generate_thumbnail
-from user.models import User
-from user.serializers import PublicUserSerializer, PublicSelfUserSerializer
+from user.models import User, UserIdentity
+from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from user_auth.models import UserSession
@@ -54,6 +54,41 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=400)
+
+    @action(detail=False, methods=['GET', 'PATCH'], url_path='self/identity')
+    def dispatch_self_identity(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            return self.get_self_identity(request, *args, **kwargs)
+        elif request.method == 'PATCH':
+            return self.patch_self_identity(request, *args, **kwargs)
+        else:
+            raise UnsupportedOperationException()
+
+    def get_self_identity(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        if not hasattr(user, 'identity'):
+            return Response({'is_success': False, 'message': 'Identity not found'}, status=404)
+
+        identity = user.identity
+        serializer = SelfUserIdentitySerializer(identity)
+        return Response(serializer.data)
+
+    def patch_self_identity(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        identity, created = UserIdentity.objects.get_or_create(
+            user=user
+        )
+
+        serializer = SelfUserIdentitySerializer(identity, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
+
 
     @action(detail=False, methods=['PUT'], url_path='self/apns-token')
     def set_apns_token(self, request, *args, **kwargs):

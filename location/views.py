@@ -129,6 +129,11 @@ class FlitzWaveViewSet(viewsets.ViewSet):
                 # TODO: Sentry.capture_message('FlitzWave: sanity check failed')
                 return Response({ 'is_success': True })
 
+            if not matcher.prerequisite_check():
+                # TODO: Sentry.capture_message('FlitzWave: prerequisite check failed')
+                return Response({ 'is_success': True })
+
+            # TODO: MatcherHistory 모델 생성, 왜 실패했는지 등등을 분석할 수 있으면 좋을 것 같아
             matched = matcher.try_match()
 
             return Response({

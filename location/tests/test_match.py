@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from datetime import timedelta
 
-from user.models import User
+from user.models import User, UserIdentity, UserGenderBit
 from card.models import Card, CardDistribution
 from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.match import UserMatcher
@@ -407,3 +407,150 @@ class UserMatcherTest(TransactionTestCase):
         self.assertIsNotNone(distribution2)
         self.assertEqual(distribution1.latitude, history1.latitude)
         self.assertEqual(distribution2.latitude, history2.latitude)
+    
+    def test_prerequisite_check_no_identity(self):
+        """
+        UserIdentity가 없는 경우 prerequisite_check 테스트
+        """
+        result = self.matcher.prerequisite_check()
+        self.assertFalse(result)  # Identity가 없으면 False 반환
+    
+    def test_prerequisite_check_one_identity_missing(self):
+        """
+        한 사용자만 UserIdentity가 있는 경우 prerequisite_check 테스트
+        """
+        # user1만 identity 생성
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertFalse(result)  # 한 명이라도 Identity가 없으면 False
+    
+    def test_prerequisite_check_mutual_acceptance(self):
+        """
+        양방향 선호가 맞는 경우 prerequisite_check 테스트
+        """
+        # 서로를 선호하는 identity 생성
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN  # 남성 선호
+        )
+        
+        UserIdentity.objects.create(
+            user=self.user2,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN  # 남성 선호
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertTrue(result)  # 서로 선호하므로 True
+    
+    def test_prerequisite_check_one_way_rejection(self):
+        """
+        한쪽이 상대방을 선호하지 않는 경우 prerequisite_check 테스트
+        """
+        # user1은 남성 선호, user2는 여성 선호
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN  # 남성 선호
+        )
+        
+        UserIdentity.objects.create(
+            user=self.user2,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.WOMAN  # 여성 선호
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertFalse(result)  # user2가 user1을 선호하지 않으므로 False
+    
+    def test_prerequisite_check_trans_safe_match(self):
+        """
+        트랜스젠더 안전 매칭 옵션이 활성화된 경우 prerequisite_check 테스트
+        """
+        # user1: 트랜스젠더, 안전 매칭 원함
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            is_trans=True,
+            trans_prefers_safe_match=True
+        )
+        
+        # user2: 일반 사용자, 트랜스 환영 안 함
+        UserIdentity.objects.create(
+            user=self.user2,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            welcomes_trans=False
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertFalse(result)  # 안전 매칭 조건 불충족으로 False
+        
+        # user2를 트랜스 환영으로 변경
+        identity2 = UserIdentity.objects.get(user=self.user2)
+        identity2.welcomes_trans = True
+        identity2.save()
+        
+        # User 객체와 세션을 refresh하여 변경사항 반영
+        self.user1.refresh_from_db()
+        self.user2.refresh_from_db()
+        self.session1.refresh_from_db()
+        self.session2.refresh_from_db()
+        
+        # 새로운 UserMatcher 인스턴스 생성
+        self.matcher = UserMatcher(self.session1, self.session2)
+        
+        result = self.matcher.prerequisite_check()
+        self.assertTrue(result)  # 이제 안전 매칭 조건 충족으로 True
+    
+    def test_prerequisite_check_both_trans(self):
+        """
+        두 사용자 모두 트랜스젠더인 경우 prerequisite_check 테스트
+        """
+        # 두 사용자 모두 트랜스젠더, 안전 매칭 원함
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            is_trans=True,
+            trans_prefers_safe_match=True
+        )
+        
+        UserIdentity.objects.create(
+            user=self.user2,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.MAN,
+            is_trans=True,
+            trans_prefers_safe_match=True
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertTrue(result)  # 트랜스젠더끼리는 안전 매칭 조건 충족
+    
+    def test_prerequisite_check_unset_gender(self):
+        """
+        성별이 설정되지 않은 경우 prerequisite_check 테스트
+        """
+        # user1: 성별 미설정
+        UserIdentity.objects.create(
+            user=self.user1,
+            gender=UserGenderBit.UNSET,
+            preferred_genders=UserGenderBit.MAN
+        )
+        
+        # user2: 남성, 모든 성별 선호
+        UserIdentity.objects.create(
+            user=self.user2,
+            gender=UserGenderBit.MAN,
+            preferred_genders=UserGenderBit.ALL()  # 모든 성별 선호
+        )
+        
+        result = self.matcher.prerequisite_check()
+        self.assertFalse(result)  # UNSET은 어떤 선호와도 매칭되지 않음
