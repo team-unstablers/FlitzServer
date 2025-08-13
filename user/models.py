@@ -1,3 +1,4 @@
+import enum
 from typing import Optional
 
 from django.contrib.auth.models import AbstractUser
@@ -22,6 +23,16 @@ def profile_image_upload_to(instance, filename):
     # UUID의 첫 2글자로 디렉토리 샤딩 (256개 디렉토리로 분산)
     shard = file_uuid[:2]
     return f"profile_images/{shard}/{file_uuid}.jpg"
+
+class UserGenderBit(models.IntegerChoices):
+    UNSET = 0
+    MAN = 1
+    WOMAN = 2
+    NON_BINARY = 4
+
+    @staticmethod
+    def ALL():
+        return UserGenderBit.MAN | UserGenderBit.WOMAN | UserGenderBit.NON_BINARY
 
 class User(AbstractUser):
     class Meta:
@@ -122,8 +133,22 @@ class User(AbstractUser):
         # 파일명은 upload_to 함수가 자동으로 처리
         self.profile_image.save('thumbnail.jpg', thumbnail, save=True)
 
+class UserIdentity(BaseModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
 
+    # 성별 필드
+    gender = models.IntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
+    # 트랜스젠더 여부
+    is_trans = models.BooleanField(default=False)
+    # 트랜스젠더 여부를 다른 사용자에게 표시할 것인가
+    display_trans_to_others = models.BooleanField(default=False)
 
+    # 선호하는 성별 (비트 마스크)
+    preferred_gender = models.IntegerField(default=0)
+    # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부
+    welcomes_trans = models.BooleanField(default=False)
+    # 트랜스젠더인 경우, 안전한 매칭을 선호할 것인지 여부 (트랜스젠더 당사자나, welcomes_trans=True인 사용자와만 매칭됨)
+    trans_prefers_safe_match = models.BooleanField(default=False)
 
 class UserLike(BaseModel):
     class Meta:
