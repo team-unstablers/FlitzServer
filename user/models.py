@@ -144,7 +144,7 @@ class UserIdentity(BaseModel):
     display_trans_to_others = models.BooleanField(default=False)
 
     # 선호하는 성별 (비트 마스크)
-    preferred_gender = models.IntegerField(default=0)
+    preferred_genders = models.IntegerField(default=0)
     # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부
     welcomes_trans = models.BooleanField(default=False)
     # 트랜스젠더인 경우, 안전한 매칭을 선호할 것인지 여부 (트랜스젠더 당사자나, welcomes_trans=True인 사용자와만 매칭됨)
