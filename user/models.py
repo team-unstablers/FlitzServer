@@ -145,10 +145,28 @@ class UserIdentity(BaseModel):
 
     # 선호하는 성별 (비트 마스크)
     preferred_genders = models.IntegerField(default=0)
-    # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부
+    # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부,
+    # 구현 시 배제 옵션이 아니라, 환영 옵션임을 인지해야 합니다: 이 설정을 False로 한다고 해도 트랜스젠더 분들과는 매칭될 수 있어야 합니다.
     welcomes_trans = models.BooleanField(default=False)
     # 트랜스젠더인 경우, 안전한 매칭을 선호할 것인지 여부 (트랜스젠더 당사자나, welcomes_trans=True인 사용자와만 매칭됨)
     trans_prefers_safe_match = models.BooleanField(default=False)
+
+    def is_acceptable(self, other: 'UserIdentity') -> bool:
+        """
+        다른 사용자의 아이덴티티가 현재 사용자의 선호에 맞는지 확인합니다.
+        """
+
+        is_preferred = self.preferred_genders & other.gender != 0
+
+        if not is_preferred:
+            # 선호하는 성별이 아니면 매칭 불가
+            return False
+
+        if self.is_trans and self.trans_prefers_safe_match:
+            # GUARD: 안전한 매칭을 선호하는 트랜스젠더인 경우 상대가 트랜스젠더 당사자인거나, 트랜스젠더에 대해 우호적이어야 한다
+            return other.is_trans or other.welcomes_trans
+
+        return True
 
 class UserLike(BaseModel):
     class Meta:

@@ -101,6 +101,25 @@ class UserMatcher:
 
         return True
 
+    def prerequisite_check(self) -> bool:
+        """
+        서로가 선호 관계에 있는지 확인해야 합니다.
+        """
+
+        user_a = self.discoverer.user
+        user_b = self.discovered.user
+
+        # sanity check
+        if not hasattr(user_a, 'identity') or not hasattr(user_b, 'identity'):
+            # TODO: Sentry.capture_message('FlitzWave: sanity check failed during prerequisite check; identity not set')
+            return False
+
+        identity_a = user_a.identity
+        identity_b = user_b.identity
+
+        return identity_a.is_acceptable(identity_b) and identity_b.is_acceptable(identity_a)
+
+
     def try_match(self) -> bool:
         """
         매칭을 시도합니다.
