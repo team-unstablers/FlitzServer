@@ -5,7 +5,8 @@ from django.db import transaction
 from django.http import Http404
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, APIException
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from channels.layers import get_channel_layer
@@ -61,6 +62,8 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
 class DirectMessageViewSet(viewsets.ModelViewSet):
 
+    MAX_PAYLOAD_LENGTH = 2048 # 최대 메시지 페이로드 길이 (2KB)
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get_conversation_id(self):
@@ -85,7 +88,17 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
             .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True) \
             .select_related('sender', 'attachment')
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs):
+        payload_length = int(request.META.get('CONTENT_LENGTH', '0'))
+
+        if payload_length > self.MAX_PAYLOAD_LENGTH:
+            exception = APIException(
+                detail=f"Payload length exceeds maximum limit of {self.MAX_PAYLOAD_LENGTH} bytes.",
+            )
+            exception.status_code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+
+            raise exception
+
         request.data['sent_by'] = self.request.user.id
         request.data['parent_conversation'] = self.get_conversation_id()
 

@@ -11,7 +11,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name', 'profile_image_url')
+        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url')
 
 class PublicSimpleUserSerializer(serializers.ModelSerializer):
 
@@ -22,7 +22,28 @@ class PublicSimpleUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name', 'profile_image_url')
+        # FIXME: 이거 앱 호환성때문에 부수 fields가 추가됨... ㅠㅠㅠㅠ
+        #        앱 내에서 SimpleUser와 User를 구분하십시오!!
+        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url')
+
+class HashtagListField(serializers.JSONField):
+    """
+    해시태그 필드를 위한 커스텀 JSONField
+    """
+
+    def to_representation(self, value):
+        # FIXME
+        if isinstance(value, list):
+            return [tag.strip() for tag in value if isinstance(tag, str)]
+
+        return []
+
+    def to_internal_value(self, data):
+        # FIXME
+        if isinstance(data, list):
+            return [tag.strip() for tag in data if isinstance(tag, str)]
+
+        raise ValueError("Expected a list of strings for hashtags.")
 
 class PublicSelfUserSerializer(serializers.ModelSerializer):
     """
@@ -31,8 +52,15 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
 
     profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
 
+    title = serializers.CharField(allow_blank=True, max_length=20)
+    bio = serializers.CharField(allow_blank=True, max_length=600)
+
+
+    hashtags = HashtagListField()
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name', 'profile_image_url', 'free_coins', 'paid_coins')
+        fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
+        read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
 
 

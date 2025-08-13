@@ -30,8 +30,11 @@ TextElementType = Literal["text"]
 
 @dataclass
 class ImageElement:
+    id: Optional[str]
+
     type: ImageElementType
     transform: Transform
+    zIndex: Optional[int]
 
     source: AssetReference
     size: ElementSize
@@ -39,8 +42,11 @@ class ImageElement:
 
 @dataclass
 class TextElement:
+    id: Optional[str]
+
     type: TextElementType
     transform: Transform
+    zIndex: Optional[int]
 
     text: str
 

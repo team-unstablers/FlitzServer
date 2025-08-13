@@ -27,7 +27,7 @@ DirectMessageAttachmentContentType = Literal["attachment"]
 class DirectMessageTextContent:
     type: DirectMessageTextContentType
     text: str
-
+    
     def as_dict(self) -> dict:
         return asdict(self)
 

@@ -44,12 +44,12 @@ class UserSessionTests(TestCase):
         mock_apns.default.return_value = mock_default
         
         # Call method
-        self.session.send_push_message('Test Title', 'Test Body', {'key': 'value'}, thread_id=None)
+        self.session.send_push_message('Test Title', 'Test Body', {'key': 'value'}, thread_id=None, mutable_content=False)
         
         # Check method calls
         mock_apns.default.assert_called_once()
         mock_default.send_notification.assert_called_once_with(
-            'Test Title', 'Test Body', [self.session.apns_token], {'key': 'value'}, thread_id=None
+            'Test Title', 'Test Body', [self.session.apns_token], {'key': 'value'}, thread_id=None, mutable_content=False
         )
 
     def test_session_with_expiry(self):

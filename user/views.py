@@ -30,12 +30,30 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         # 사용자 리스트는 보여져선 안됨
         raise UnsupportedOperationException()
 
-    @action(detail=False, methods=['GET'], url_path='self')
+    @action(detail=False, methods=['GET', 'PATCH'], url_path='self')
+    def dispatch_self(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            return self.get_self(request, *args, **kwargs)
+        elif request.method == 'PATCH':
+            return self.patch_self(request, *args, **kwargs)
+        else:
+            raise UnsupportedOperationException()
+
     def get_self(self, request, *args, **kwargs):
         user = self.request.user
         serializer = PublicSelfUserSerializer(user)
 
         return Response(serializer.data)
+
+    def patch_self(self, request, *args, **kwargs):
+        user = self.request.user
+        serializer = PublicSelfUserSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
 
     @action(detail=False, methods=['PUT'], url_path='self/apns-token')
     def set_apns_token(self, request, *args, **kwargs):

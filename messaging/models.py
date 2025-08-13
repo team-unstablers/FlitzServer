@@ -85,6 +85,10 @@ class DirectMessage(BaseModel):
 
         if content_type == 'text':
             notification_body = content.get('text')
+
+            if len(notification_body) > 240:
+                notification_body = notification_body[:240] + '…'
+
         elif content_type == 'attachment':
             attachment_type = content.get('attachment_type')
             if attachment_type == 'image':
@@ -110,9 +114,13 @@ class DirectMessage(BaseModel):
                 {
                     'type': 'message',
                     'user_id': str(self.sender.id),
+                    'user_display_name': self.sender.display_name,
+                    'user_profile_image_url': self.sender.profile_image_url,
+                    'message_content': notification_body,
                     'conversation_id': str(self.conversation.id)
                 },
-                thread_id=str(self.conversation.id)
+                thread_id=str(self.conversation.id),
+                mutable_content=True
             )
 
     def get_content_with_url(self) -> dict:
