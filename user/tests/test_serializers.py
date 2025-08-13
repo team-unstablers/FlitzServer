@@ -15,6 +15,11 @@ class PublicUserSerializerTests(TestCase):
             username='testuser',
             display_name='Test User',
             password='testpassword',
+
+            title='테스트 유저',
+            bio='안녕! 저는 테스트 사용자입니다.',
+            hashtags=['테스트', '유저'],
+
             profile_image=None
         )
         self.serializer = PublicUserSerializer(instance=self.user)
@@ -22,7 +27,7 @@ class PublicUserSerializerTests(TestCase):
     def test_contains_expected_fields(self):
         """PublicUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
-        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'profile_image_url'})
+        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url'})
 
     def test_field_content(self):
         """직렬화된 데이터의 내용이 올바른지 테스트"""
@@ -39,6 +44,11 @@ class PublicSimpleUserSerializerTests(TestCase):
             username='testuser',
             display_name='Test User',
             password='testpassword',
+
+            title='테스트 유저',
+            bio='안녕! 저는 테스트 사용자입니다.',
+            hashtags=['테스트', '유저'],
+
             profile_image=None,
         )
         self.serializer = PublicSimpleUserSerializer(instance=self.user)
@@ -46,7 +56,7 @@ class PublicSimpleUserSerializerTests(TestCase):
     def test_contains_expected_fields(self):
         """PublicSimpleUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
-        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'profile_image_url'})
+        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url'})
 
     def test_field_content(self):
         """직렬화된 데이터의 내용이 올바른지 테스트"""
@@ -73,7 +83,11 @@ class PublicSelfUserSerializerTests(TestCase):
         """PublicSelfUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
         self.assertEqual(set(data.keys()),
-                         {'id', 'username', 'display_name', 'profile_image_url', 
+                         {'id', 'username', 'display_name',
+                          'title', 'bio',
+                          'hashtags',
+                          'profile_image_url',
+                          'phone_number', 'email', 'birth_date',
                           'free_coins', 'paid_coins'})
 
     def test_field_content(self):
