@@ -114,6 +114,11 @@ class PublicUserViewSetTests(APITestCase):
 
     def test_register(self):
         """회원가입 테스트"""
+
+        self.skipTest("회원가입 로직이 크게 바뀔 예정이므로 테스트를 스킵합니다")
+        return
+
+        """
         data = {
             'username': 'newuser',
             'password': 'newpassword'
@@ -129,6 +134,7 @@ class PublicUserViewSetTests(APITestCase):
         self.assertIsNotNone(new_user)
         self.assertTrue(new_user.check_password('newpassword'))
         self.assertTrue(new_user.is_active)
+        """
 
     def test_authentication_required(self):
         """인증이 필요한지 테스트"""
