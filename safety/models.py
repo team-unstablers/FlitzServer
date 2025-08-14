@@ -88,6 +88,10 @@ class UserContactsTrigger(BaseModel):
             if user is None:
                 return
 
+            if user == self.user:
+                # 자기 자신은 차단할 수 없음
+                return
+
             block = UserBlock.objects.create(user=user, blocked_by=self.user, reason=UserBlock.Reason.BY_TRIGGER)
             self.related_object = block
             self.save()

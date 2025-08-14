@@ -22,6 +22,10 @@ def evaluate_block_triggers(user_id: UUID):
         block_targets = User.objects.filter(phone_number_hashed__in=hashed_phone_numbers)
         for target in block_targets:
             # 이미 차단된 사용자면 건너뜀
+            if target.id == user.id:
+                # 자기 자신은 차단할 수 없음
+                continue
+
             if UserBlock.objects.filter(user=target, blocked_by=user).exists():
                 continue
 

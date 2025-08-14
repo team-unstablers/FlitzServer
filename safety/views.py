@@ -28,6 +28,9 @@ class UserBlockViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         # 차단할 사용자 ID 필요
         user_id = request.data.get('user_id')
+
+        if user_id == self.request.user.id:
+            return Response({"error": "You cannot block yourself"}, status=status.HTTP_400_BAD_REQUEST)
         
         # 사용자 존재 확인
         try:
@@ -144,10 +147,17 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
             try:
                 normalized_phone_number = normalize_phone_number(phone_number, request.user.country)
                 hashed_phone_number = hash_phone_number(normalized_phone_number)
+
+                if hashed_phone_number == self.request.user.phone_number_hashed:
+                    # 자신의 전화번호는 트리거로 추가할 수 없도록 한다
+                    continue
+
                 hashed_phone_numbers.append(hashed_phone_number)
             except Exception as e:
                 # TODO: report to sentry and continue
+                print(e)
                 continue
+
 
         # 이미 존재하는 항목들 조회 (사용자별 + 전체에서 unique)
         existing_hashes = set(existing_hashes)
@@ -168,6 +178,7 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
 
         # bulk_create로 한 번에 생성
         if triggers_to_create:
+            print(f"Creating {len(triggers_to_create)} new triggers for user {request.user.id}")
             UserContactsTrigger.objects.bulk_create(triggers_to_create, ignore_conflicts=True)
 
         # 트리거에는 존재하지만, phone_numbers에는 없는 항목들은 삭제
