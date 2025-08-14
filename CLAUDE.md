@@ -203,6 +203,7 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 - **card**: 프로필 카드 및 에셋 관리
 - **messaging**: 채팅 및 메시지 관리
 - **location**: 위치 기반 기능, 사용자 발견 시스템
+- **safety**: 사용자 보호 기능 (차단, 연락처 기반 제한, 자동 오프라인 모드)
 
 # CODE CONVENTIONS
 
@@ -229,6 +230,102 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 - 파일 저장 시 `object_key`와 `public_url` 함께 관리
 - 자동 썸네일 생성 (이미지 첨부파일)
 - 파일 삭제 시 스토리지에서도 함께 삭제하는 메서드 구현
+
+# MODEL ARCHITECTURE
+
+## Core Models (flitz 앱)
+### BaseModel
+- 모든 모델의 기본 클래스
+- UUIDv7 기반 ID (시간순 정렬 가능)
+- `created_at`, `updated_at` 자동 타임스탬프
+
+## User Models (user 앱)
+### User
+- Django AbstractUser 상속
+- 프로필 정보: `username`, `display_name`, `bio`, `hashtags`
+- 프로필 이미지: 자동 썸네일 생성 및 S3 저장
+- 코인 시스템: `free_coins`, `paid_coins`
+- 연락처 차단 기능: `contacts_blocker_enabled`
+- 관계: `main_card` (메인 프로필 카드), `primary_session` (주 세션)
+
+### UserIdentity
+- 사용자 성별 및 선호도 정보
+- `gender`: 성별 (비트 마스크)
+- `is_trans`, `display_trans_to_others`: 트랜스젠더 관련 설정
+- `preferred_genders`: 선호 성별 (비트 마스크)
+- `is_acceptable()`: 매칭 가능 여부 판단
+
+### UserLike & UserMatch
+- `UserLike`: 단방향 좋아요
+- `UserMatch`: 양방향 좋아요 시 자동 생성
+- 매칭 시 자동으로 대화방 생성 및 푸시 알림
+
+## Authentication Models (user_auth 앱)
+### UserSession
+- JWT 기반 세션 관리
+- APNS 토큰 저장 (`apns_token`)
+- `create_token()`: JWT 토큰 생성
+- `send_push_message()`: 푸시 알림 전송
+
+## Card Models (card 앱)
+### Card
+- 프로필 카드 데이터 (JSON 구조)
+- `content`: 카드 디자인 정보 (background, elements 등)
+- `remove_orphaned_assets()`: 미사용 에셋 정리
+- `get_content_with_url()`: S3 URL이 포함된 카드 데이터 반환
+
+### CardDistribution
+- 카드 교환 내역 및 공개 상태 관리
+- `reveal_phase`: 공개 단계 (HIDDEN → BLURRY → FULLY_REVEALED)
+- 위치 정보: `latitude`, `longitude`, `altitude`, `accuracy`
+- 공개 조건 체크: `is_okay_to_reveal_soft/hard/assertive`
+
+### OfficialCardAsset & UserCardAsset
+- `OfficialCardAsset`: 공식 에셋 (유료 구매)
+- `UserCardAsset`: 사용자 업로드 에셋
+- 파일 자동 삭제 메서드 구현
+
+## Messaging Models (messaging 앱)
+### DirectMessageConversation
+- 대화방 관리
+- `latest_message`: 최신 메시지 참조
+- `create_conversation()`: 대화방 생성 (중복 체크)
+
+### DirectMessage
+- 메시지 데이터 (JSON 구조)
+- GinIndex로 검색 최적화
+- `send_push_notification()`: 푸시 알림 자동 전송
+
+### DirectMessageAttachment
+- 첨부파일 메타데이터
+- 자동 썸네일 생성 (이미지)
+- S3 파일 관리
+
+## Location Models (location 앱)
+### UserLocation
+- 사용자 현재 위치
+- 자동 타임존 감지 (`update_timezone()`)
+- `distance_to()`: 거리 계산 (haversine)
+
+### DiscoverySession & DiscoveryHistory
+- `DiscoverySession`: 사용자 발견 세션
+- `DiscoveryHistory`: 발견 이력 (Bluetooth 교환 기록)
+
+## Safety Models (safety 앱)
+### UserWaveSafetyZone
+- 자동 오프라인 모드 설정
+- 특정 위치 반경 내 자동 비활성화
+
+### UserBlock
+- 사용자 차단/제한
+- 차단 유형: BLOCK (완전 차단), LIMIT (제한)
+- 차단 사유: BY_USER, BY_TRIGGER
+
+### UserContactsTrigger
+- 연락처 기반 자동 차단
+- SHA256 해시된 전화번호 저장
+- `evaluate()`: 트리거 평가
+- `perform_block()`: 자동 차단 실행
 
 # APP SPECIFIC FEATURES
 
@@ -284,6 +381,88 @@ Flitz에서는 의도치 않은 아웃팅 방지를 위해, 사용자 자신을 
 - Bluetooth LE + GPS 기반 사용자 발견 시스템
 - 지연된 카드 표시 (delayed exchange)
 - 위치 정보 퍼지 처리 (정확한 거리 대신 상대적 표현)
+
+## Safety System (safety 앱)
+- 연락처 기반 자동 차단/제한
+- 자동 오프라인 모드 (특정 위치 반경)
+- 사용자 차단 관리
+
+# API ENDPOINTS
+
+## 인증
+- `POST /auth/token` - JWT 토큰 발급
+
+## 사용자
+- `/users/` - 사용자 정보 조회 (PublicUserViewSet)
+
+## 카드
+- `/cards/` - 카드 관리 (PublicCardViewSet)
+- `/cards/distribution/` - 카드 배포 관리 (CardDistributionViewSet)
+
+## 메시징
+- `/conversations/` - 대화방 관리
+- `/conversations/{id}/messages/` - 메시지 관리
+- `/conversations/{id}/attachments/` - 첨부파일 관리
+- WebSocket: `ws/direct-messages/{conversation_id}/`
+
+## 위치/발견
+- `/wave/` - Wave (발견) 기능 (FlitzWaveViewSet)
+
+## 안전
+- `/blocks/` - 사용자 차단 관리 (UserBlockViewSet)
+- `/contact-triggers/` - 연락처 트리거 관리 (UserContactsTriggerViewSet)
+
+# DEVELOPMENT COMMANDS
+
+## 개발 환경 설정
+```bash
+# Docker 컨테이너 실행 (MinIO, Redis)
+cd flitz-devenv
+docker-compose up -d
+
+# Poetry 의존성 설치
+poetry install
+```
+
+## 주요 개발 명령어
+```bash
+# 개발 서버 실행
+poetry run python manage.py runserver
+
+# 마이그레이션 생성
+poetry run python manage.py makemigrations
+
+# 마이그레이션 적용
+poetry run python manage.py migrate
+
+# 테스트 실행
+poetry run python manage.py test
+
+# 특정 앱 테스트만 실행
+poetry run python manage.py test user
+poetry run python manage.py test messaging.tests.test_views
+
+# 특정 테스트 케이스 실행
+poetry run python manage.py test user.tests.test_models.UserModelTest
+
+# Shell 접속
+poetry run python manage.py shell
+
+# 관리자 계정 생성
+poetry run python manage.py createsuperuser
+
+# Celery 워커 실행 (백그라운드 작업)
+poetry run celery -A flitz worker -l info
+
+# Flower 실행 (Celery 모니터링)
+poetry run celery -A flitz flower
+```
+
+## Swagger API 문서
+- 개발 환경에서만 접근 가능
+- `/swagger/` - Swagger UI
+- `/redoc/` - ReDoc UI
+- `/swagger.yaml` - OpenAPI 스키마
 
 # DEVELOPMENT NOTES
 
