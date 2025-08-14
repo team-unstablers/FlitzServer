@@ -59,7 +59,7 @@ class UserContactsTrigger(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contact_triggers')
 
     # sha256sum(salt + phone_number)
-    phone_number_hashed = models.CharField(max_length=64, null=False, blank=False)
+    phone_number_hashed = models.CharField(max_length=64, null=False, blank=False, unique=True)
     related_object = models.ForeignKey(UserBlock, on_delete=models.SET_NULL, null=True, blank=True)
 
     def set_phone_number(self, phone_number: str):
