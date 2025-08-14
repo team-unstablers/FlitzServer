@@ -61,6 +61,8 @@ class User(AbstractUser):
     free_coins = models.IntegerField(default=0)
     paid_coins = models.IntegerField(default=0)
 
+    contacts_blocker_enabled = models.BooleanField(default=False, null=False, blank=False)
+
     fully_deleted_at = models.DateTimeField(null=True, blank=True)
 
     main_card = models.ForeignKey('card.Card', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
