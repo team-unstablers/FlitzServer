@@ -56,10 +56,13 @@ class UserContactsTrigger(BaseModel):
     연락처에 따른 사용자 차단 트리거 정보를 저장합니다.
     """
 
+    class Meta:
+        unique_together = (('user', 'phone_number_hashed'),)
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contact_triggers')
 
     # sha256sum(salt + phone_number)
-    phone_number_hashed = models.CharField(max_length=64, null=False, blank=False, unique=True)
+    phone_number_hashed = models.CharField(max_length=64, null=False, blank=False)
     related_object = models.ForeignKey(UserBlock, on_delete=models.SET_NULL, null=True, blank=True)
 
     def set_phone_number(self, phone_number: str):
