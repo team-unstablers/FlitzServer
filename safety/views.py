@@ -122,7 +122,7 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
         request.user.contacts_blocker_enabled = serializer.validated_data['is_enabled']
         request.user.save(update_fields=['contacts_blocker_enabled'])
 
-        return Response({'is_success': True}, status=status.HTTP_200_OK)
+        return Response({'is_enabled': request.user.contacts_blocker_enabled}, status=status.HTTP_200_OK)
 
 
     @action(detail=False, methods=['POST'], permission_classes=[permissions.IsAuthenticated], url_path='bulk-create')
