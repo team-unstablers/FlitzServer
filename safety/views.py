@@ -137,7 +137,7 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
         hashed_phone_numbers = []
         for phone_number in phone_numbers:
             try:
-                normalized_phone_number = normalize_phone_number(phone_number)
+                normalized_phone_number = normalize_phone_number(phone_number, request.user.country)
                 hashed_phone_number = hash_phone_number(normalized_phone_number)
                 hashed_phone_numbers.append(hashed_phone_number)
             except Exception as e:

@@ -63,7 +63,7 @@ class UserContactsTrigger(BaseModel):
     related_object = models.ForeignKey(UserBlock, on_delete=models.SET_NULL, null=True, blank=True)
 
     def set_phone_number(self, phone_number: str):
-        normalized_phone_number = normalize_phone_number(phone_number)
+        normalized_phone_number = normalize_phone_number(phone_number, self.user.country)
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
     def evaluate(self) -> Optional[User]:

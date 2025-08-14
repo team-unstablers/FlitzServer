@@ -44,6 +44,8 @@ class User(AbstractUser):
     username = models.CharField(max_length=24, unique=True)
     display_name = models.CharField(max_length=24)
 
+    country = models.CharField(max_length=2, null=True, blank=True)
+
     phone_number = models.CharField(max_length=32, null=True, blank=True)
     phone_number_hashed = models.CharField(max_length=64, null=True, blank=True)
 
@@ -80,7 +82,7 @@ class User(AbstractUser):
 
 
     def set_phone_number(self, phone_number: str):
-        normalized_phone_number = normalize_phone_number(phone_number)
+        normalized_phone_number = normalize_phone_number(phone_number, self.country)
 
         self.phone_number = normalized_phone_number
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
