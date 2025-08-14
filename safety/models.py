@@ -9,6 +9,21 @@ from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
 from user.models import User
 
+class UserWaveSafetyZone(BaseModel):
+    """
+    "자동으로 Wave 끄기" 기능에 대한 설정 정보를 저장합니다.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wave_safety_zone', db_index=True)
+
+    latitude = models.FloatField(null=False, blank=False)
+    longitude = models.FloatField(null=False, blank=False)
+
+    # TODO: validate: accept only (300m, 500m, 1000m)
+    radius = models.FloatField(null=False, blank=False)
+
+    is_enabled = models.BooleanField(default=False, null=False, blank=False)
+    enable_wave_after_exit = models.BooleanField(default=True, null=False, blank=False)
+
 class UserBlock(BaseModel):
     """
     사용자 차단 정보를 저장합니다.
