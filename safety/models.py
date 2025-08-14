@@ -9,6 +9,21 @@ from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
 from user.models import User
 
+class UserWaveSafetyZone(BaseModel):
+    """
+    "자동으로 Wave 끄기" 기능에 대한 설정 정보를 저장합니다.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wave_safety_zone', db_index=True)
+
+    latitude = models.FloatField(null=True, blank=False)
+    longitude = models.FloatField(null=True, blank=False)
+
+    # TODO: validate: accept only (300m, 500m, 1000m)
+    radius = models.FloatField(null=False, blank=False)
+
+    is_enabled = models.BooleanField(default=False, null=False, blank=False)
+    enable_wave_after_exit = models.BooleanField(default=True, null=False, blank=False)
+
 class UserBlock(BaseModel):
     """
     사용자 차단 정보를 저장합니다.
@@ -41,6 +56,9 @@ class UserContactsTrigger(BaseModel):
     연락처에 따른 사용자 차단 트리거 정보를 저장합니다.
     """
 
+    class Meta:
+        unique_together = (('user', 'phone_number_hashed'),)
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contact_triggers')
 
     # sha256sum(salt + phone_number)
@@ -48,7 +66,7 @@ class UserContactsTrigger(BaseModel):
     related_object = models.ForeignKey(UserBlock, on_delete=models.SET_NULL, null=True, blank=True)
 
     def set_phone_number(self, phone_number: str):
-        normalized_phone_number = normalize_phone_number(phone_number)
+        normalized_phone_number = normalize_phone_number(phone_number, self.user.country)
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
     def evaluate(self) -> Optional[User]:
@@ -68,6 +86,10 @@ class UserContactsTrigger(BaseModel):
             user = self.evaluate()
 
             if user is None:
+                return
+
+            if user == self.user:
+                # 자기 자신은 차단할 수 없음
                 return
 
             block = UserBlock.objects.create(user=user, blocked_by=self.user, reason=UserBlock.Reason.BY_TRIGGER)
