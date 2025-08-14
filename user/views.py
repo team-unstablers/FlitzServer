@@ -115,7 +115,12 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         user: User = self.request.user
 
         identity, created = UserWaveSafetyZone.objects.get_or_create(
-            user=user
+            user=user,
+            defaults={
+                'radius': 300,
+                'is_enabled': False,
+                'enable_wave_after_exit': True,
+            }
         )
 
         serializer = UserWaveSafetyZoneSerializer(identity, data=request.data, partial=True)

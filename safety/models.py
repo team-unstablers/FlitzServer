@@ -15,8 +15,8 @@ class UserWaveSafetyZone(BaseModel):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wave_safety_zone', db_index=True)
 
-    latitude = models.FloatField(null=False, blank=False)
-    longitude = models.FloatField(null=False, blank=False)
+    latitude = models.FloatField(null=True, blank=False)
+    longitude = models.FloatField(null=True, blank=False)
 
     # TODO: validate: accept only (300m, 500m, 1000m)
     radius = models.FloatField(null=False, blank=False)
