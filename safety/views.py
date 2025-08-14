@@ -8,6 +8,7 @@ from flitz.exceptions import UnsupportedOperationException
 from safety.models import UserBlock, UserContactsTrigger
 from safety.serializers import UserBlockSerializer, UserContactsTriggerSerializer, UserContactsTriggerBulkCreateSerializer, \
     UserContactsTriggerEnableSetterSerializer
+from safety.tasks import evaluate_block_triggers
 from safety.utils.phone_number import normalize_phone_number, hash_phone_number
 from user.models import User
 
@@ -133,6 +134,10 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
 
         phone_numbers: List[str] = serializer.validated_data['phone_numbers']
 
+        existing_hashes = UserContactsTrigger.objects.filter(
+            user=request.user
+        ).values_list('phone_number_hashed', flat=True)
+
         # 모든 전화번호를 normalize하고 hash
         hashed_phone_numbers = []
         for phone_number in phone_numbers:
@@ -145,11 +150,7 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
                 continue
 
         # 이미 존재하는 항목들 조회 (사용자별 + 전체에서 unique)
-        existing_hashes = set(
-            UserContactsTrigger.objects.filter(
-                phone_number_hashed__in=hashed_phone_numbers
-            ).values_list('phone_number_hashed', flat=True)
-        )
+        existing_hashes = set(existing_hashes)
 
         # 새로 생성할 항목들만 필터링
         triggers_to_create = [
@@ -161,9 +162,23 @@ class UserContactsTriggerViewSet(viewsets.ModelViewSet):
             if hashed_phone_number not in existing_hashes
         ]
 
+        triggers_to_delete = [
+            existing_hash for existing_hash in existing_hashes if existing_hash not in hashed_phone_numbers
+        ]
+
         # bulk_create로 한 번에 생성
         if triggers_to_create:
             UserContactsTrigger.objects.bulk_create(triggers_to_create, ignore_conflicts=True)
+
+        # 트리거에는 존재하지만, phone_numbers에는 없는 항목들은 삭제
+        if triggers_to_delete:
+            UserContactsTrigger.objects.filter(
+                user=request.user,
+                phone_number_hashed__in=triggers_to_delete
+            ).delete()
+
+        # 트리거를 평가하여 차단 수행
+        evaluate_block_triggers.delay_on_commit(request.user.id)
 
         return Response({'is_success': True}, status=status.HTTP_201_CREATED)
 
