@@ -1,4 +1,7 @@
+import uuid
+
 from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
 from django.shortcuts import render, get_object_or_404
 
 from rest_framework import permissions, viewsets
@@ -7,7 +10,8 @@ from rest_framework.response import Response
 
 from flitz.thumbgen import generate_thumbnail
 from user.models import User, UserIdentity
-from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer
+from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
+    UserRegistrationSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from user_auth.models import UserSession
@@ -125,16 +129,31 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        password = request.data.get('password')
+        # TODO: rate limiting by IP address?
+        # TODO: recaptcha validation
 
-        user = User.objects.create_user(
-            username=username,
-            email=None,
-            password=password
-        )
+        serializer = UserRegistrationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({}, status=400)
 
-        user.is_active = True
-        user.save()
+        validated_data = serializer.validated_data
+
+        with transaction.atomic():
+
+            user = User.objects.create_user(
+                username=validated_data['username'],
+                email=None,
+                password=validated_data['password'],
+            )
+
+            user.display_name = validated_data['display_name']
+            user.title = validated_data['title']
+            user.bio = validated_data['bio']
+            user.hashtags = validated_data['hashtags']
+
+            # TODO: NICE 인증 이후 휴대폰 번호 설정하도록 해야 함
+
+            user.is_active = True
+            user.save()
 
         return Response({'is_success': True}, status=201)

@@ -64,7 +64,6 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
         read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
 
-
 class SelfUserIdentitySerializer(serializers.ModelSerializer):
     """
     자신의 정체성 / 선호 정보를 fetch하거나 수정할 때 사용되는 serializer
@@ -73,3 +72,14 @@ class SelfUserIdentitySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserIdentity
         fields = ('gender', 'is_trans', 'display_trans_to_others', 'preferred_genders', 'welcomes_trans', 'trans_prefers_safe_match')
+
+
+class UserRegistrationSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=24, allow_blank=False, allow_null=False)
+    password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
+
+    display_name = serializers.CharField(max_length=24, allow_blank=False)
+
+    title = serializers.CharField(allow_blank=False, max_length=20)
+    bio = serializers.CharField(allow_blank=False, max_length=600)
+    hashtags = HashtagListField()
