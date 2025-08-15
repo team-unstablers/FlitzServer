@@ -182,6 +182,13 @@ STORAGES = {
     }
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://localhost:6380/1',
+    }
+}
+
 CELERY_TIMEZONE='UTC'
 CELERY_BROKER_URL = 'redis://localhost:6380/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6380/0'
