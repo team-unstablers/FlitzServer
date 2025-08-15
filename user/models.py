@@ -106,9 +106,9 @@ class User(AbstractUser):
 
         diff = timezone.now() - last_seen
 
-        if diff.seconds < (60 * 30):
+        if diff.seconds < (60 * 5):
             return 'online'
-        elif diff.seconds < (60 * 60 * 3):
+        elif diff.seconds < (60 * 60 * 12):
             return 'recently'
         else:
             return 'offline'
