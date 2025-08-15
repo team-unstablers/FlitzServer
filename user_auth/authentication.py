@@ -33,6 +33,12 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
                 if session.expires_at < datetime.now(tz=timezone.utc):
                     return None
 
+            try:
+                session.user.update_last_seen()
+            except Exception as e:
+                # Log the error or handle it as needed
+                print(f"Error updating last seen for user {session.user.id}: {e}")
+
             return session.user, session
 
         except jwt.InvalidTokenError:

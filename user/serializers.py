@@ -9,14 +9,27 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
 
     profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
+    online_status = serializers.CharField(read_only=True)
+    fuzzy_distance = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url')
+        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'online_status', 'fuzzy_distance', 'profile_image_url')
+
+    def get_fuzzy_distance(self, obj: User):
+        request = self.context.get('request')
+        user = request.user if request else None
+
+        if user and user.is_authenticated:
+            return obj.fuzzy_distance_to(user)
+
+        return 'farthest'
 
 class PublicSimpleUserSerializer(serializers.ModelSerializer):
 
     profile_image_url = serializers.ImageField(source='profile_image', read_only=True)
+    online_status = serializers.CharField(read_only=True)
+    fuzzy_distance = serializers.SerializerMethodField()
 
     """
     타 사용자를 fetch할 때 사용되는 serializer
@@ -25,7 +38,17 @@ class PublicSimpleUserSerializer(serializers.ModelSerializer):
         model = User
         # FIXME: 이거 앱 호환성때문에 부수 fields가 추가됨... ㅠㅠㅠㅠ
         #        앱 내에서 SimpleUser와 User를 구분하십시오!!
-        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url')
+        fields = ('id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'online_status', 'fuzzy_distance', 'profile_image_url')
+
+
+    def get_fuzzy_distance(self, obj: User):
+        request = self.context.get('request')
+        user = request.user if request else None
+
+        if user and user.is_authenticated:
+            return obj.fuzzy_distance_to(user)
+
+        return 'farthest'
 
 class HashtagListField(serializers.JSONField):
     """
@@ -56,13 +79,19 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     title = serializers.CharField(allow_blank=True, max_length=20)
     bio = serializers.CharField(allow_blank=True, max_length=600)
 
-
     hashtags = HashtagListField()
+
+    online_status = serializers.CharField(read_only=True)
+    fuzzy_distance = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
-        read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'free_coins', 'paid_coins')
+        fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins')
+        read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins')
+
+    def get_fuzzy_distance(self, obj: User):
+        # 자기 자신은 가장 가까운 거리로 표시
+        return 'nearest'
 
 class SelfUserIdentitySerializer(serializers.ModelSerializer):
     """

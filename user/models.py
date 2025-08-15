@@ -1,14 +1,17 @@
-from typing import Optional
+import datetime
+from typing import Optional, Literal
 
+import pytz
 from django.contrib.auth.models import AbstractUser
 from django.core.files.uploadedfile import UploadedFile
+from django.core.cache import cache
 from django.db import models, transaction
+from django.utils import timezone
 from uuid_v7.base import uuid7
 
 from flitz.models import UUIDv7Field, BaseModel
 from flitz.thumbgen import generate_thumbnail
 from safety.utils.phone_number import hash_phone_number, normalize_phone_number
-
 
 # Create your models here.
 
@@ -32,6 +35,12 @@ class UserGenderBit(models.IntegerChoices):
     @staticmethod
     def ALL():
         return UserGenderBit.MAN | UserGenderBit.WOMAN | UserGenderBit.NON_BINARY
+
+
+OnlineStatus  = Literal['online', 'recently', 'offline']
+
+# FIXME: 그런데 이거 나라마다 멀다고 느끼는 기준이 다를 수 있지 않을까?
+FuzzyDistance = Literal['nearest', 'near', 'medium', 'far', 'farthest']
 
 class User(AbstractUser):
     class Meta:
@@ -80,6 +89,35 @@ class User(AbstractUser):
 
         return self.profile_image.url
 
+    @property
+    def last_seen(self) -> datetime:
+        timestamp = cache.get(f'user:last_seen:{self.id}')
+
+        if timestamp is None:
+            return None
+
+        return timezone.datetime.fromtimestamp(timestamp, tz=pytz.UTC)
+
+    @property
+    def online_status(self) -> OnlineStatus:
+        last_seen = self.last_seen
+        if not last_seen:
+            return 'offline'
+
+        diff = timezone.now() - last_seen
+
+        if diff.seconds < (60 * 30):
+            return 'online'
+        elif diff.seconds < (60 * 60 * 3):
+            return 'recently'
+        else:
+            return 'offline'
+
+    def update_last_seen(self):
+        TIMEOUT = 86400 * 7
+
+        cache.set(f'user:last_seen:{self.id}', timezone.now().timestamp(), timeout=TIMEOUT)
+
 
     def set_phone_number(self, phone_number: str):
         normalized_phone_number = normalize_phone_number(phone_number, self.country)
@@ -122,6 +160,38 @@ class User(AbstractUser):
             location.save()
 
         return location
+
+    def distance_to(self, other: 'User') -> Optional[float]:
+        if self.id == other.id:
+            return 0.0
+
+        if not hasattr(other, 'location') or not hasattr(self, 'location'):
+            return None
+
+        return self.location.distance_to(other.location)
+
+    def fuzzy_distance_to(self, other: 'User') -> FuzzyDistance:
+        if self.id == other.id:
+            return 'nearest'
+
+        distance = self.distance_to(other)
+
+        if distance is None:
+            return 'farthest'
+
+        # FIXME: 이거 수정 필요
+
+        if distance <= 500: # 500m 이내
+            return 'nearest'
+        elif distance <= 1500: # 1.5km 이내
+            return 'near'
+        elif distance <= 5000: # 5km 이내
+            return 'medium'
+        elif distance <= 30000: # 30km 이내
+            return 'far'
+        else: # 20km 이상
+            return 'farthest'
+
 
     def set_profile_image(self, image_file: UploadedFile):
         if not image_file.content_type.startswith('image/'):
