@@ -65,16 +65,6 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         validated_data = serializer.validated_data
-        
-        session = DiscoverySession.objects.filter(
-            id=validated_data['session_id'],
-            user=request.user,
-            is_active=True
-        ).first()
-
-        if not session:
-            # FIXME
-            raise UnsupportedOperationException()
 
         with transaction.atomic():
             request.user.update_location(
