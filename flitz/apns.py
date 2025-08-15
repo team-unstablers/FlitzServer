@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 
 import os
 
@@ -106,11 +106,23 @@ class MockedAPNS:
 
         self.send_push(payload=payload, device_tokens=device_tokens)
     
-    def send_push(self, payload: dict, device_tokens: List[str]):
+    def send_silent_push(self, device_tokens: List[str], user_info: dict=None):
+        if user_info is None:
+            payload = dict()
+        else:
+            payload = user_info.copy()
+        
+        payload['aps'] = {
+            "content-available": 1
+        }
+        
+        self.send_push(payload=payload, device_tokens=device_tokens, push_type='background')
+    
+    def send_push(self, payload: dict, device_tokens: List[str], push_type: Literal['alert', 'background'] = 'alert'):
         # 실제 HTTP 요청을 보내지 않고 로깅만 수행
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"[MOCKED] Would send push notification: {payload} to {device_tokens}")
+        logger.info(f"[MOCKED] Would send {push_type} push notification: {payload} to {device_tokens}")
         # 실제 요청을 보내지 않음
 
 
@@ -161,15 +173,27 @@ class APNS:
             payload['aps']['thread-id'] = thread_id
 
         self.send_push(payload=payload, device_tokens=device_tokens)
+    
+    def send_silent_push(self, device_tokens: List[str], user_info: dict=None):
+        if user_info is None:
+            payload = dict()
+        else:
+            payload = user_info.copy()
+        
+        payload['aps'] = {
+            "content-available": 1
+        }
+        
+        self.send_push(payload=payload, device_tokens=device_tokens, push_type='background')
 
-    def send_push(self, payload: dict, device_tokens: List[str]):
+    def send_push(self, payload: dict, device_tokens: List[str], push_type: Literal['alert', 'background'] = 'alert'):
         jwt_token = self.identity.jwt_token()
 
         headers = {
             "authorization": "bearer " + jwt_token,
             "apns-topic": self.identity.bundle_id,
-            "apns-push-type": "alert",
-            "apns-priority": "10",
+            "apns-push-type": push_type,
+            "apns-priority": "10" if push_type == 'alert' else "5",
             "apns-expiration": "0"
         }
         
