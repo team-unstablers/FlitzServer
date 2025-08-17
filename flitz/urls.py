@@ -31,6 +31,7 @@ from card.views import PublicCardViewSet, ReceivedCardViewSet, CardDistributionV
 
 from location.views import FlitzWaveViewSet
 from safety.views import UserBlockViewSet, UserContactsTriggerViewSet
+from notice.views import NoticeViewSet
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -60,6 +61,8 @@ router.register(r'cards', PublicCardViewSet, basename='Card')
 
 router.register(r'blocks', UserBlockViewSet, basename='UserBlock')
 router.register(r'contact-triggers', UserContactsTriggerViewSet, basename='UserContactsTrigger')
+
+router.register(r'notices', NoticeViewSet, basename='Notice')
 
 urlpatterns = [
     path('', include(router.urls)),
