@@ -46,7 +46,7 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
-router = routers.DefaultRouter()
+router = routers.SimpleRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
 router.register(r'conversations/(?P<conversation_id>[0-9a-fA-F\-]+)/messages', DirectMessageViewSet, basename='DirectMessage')

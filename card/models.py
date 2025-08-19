@@ -303,7 +303,7 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         )
         """
 
-        if settings.DEBUG:
+        if settings.DEVELOPMENT_MODE:
             # 개발 환경에서는 soft reveal 조건을 무시합니다.
             return True
 
