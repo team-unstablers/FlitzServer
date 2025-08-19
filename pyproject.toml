@@ -26,6 +26,7 @@ phonenumbers = "^9.0.1"
 channels = {extras = ["daphne"], version = "^4.2.0"}
 channels-redis = "^4.2.1"
 drf-yasg = "^1.21.10"
+pip-licenses = "^5.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
