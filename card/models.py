@@ -357,3 +357,21 @@ class CardVote(BaseModel):
 
     vote_type = models.IntegerField(choices=VoteType.choices)
 
+class CardFavoriteItem(BaseModel):
+    """
+    사용자가 '좋아요'한 카드 아이템을 저장합니다.
+    """
+
+    class Meta:
+        unique_together = (('user', 'card'),)
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['card']),
+
+            models.Index(fields=['deleted_at']),
+        ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='card_collection_items')
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='collection_items')
+
+    deleted_at = models.DateTimeField(null=True, blank=True)
