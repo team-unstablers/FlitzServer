@@ -307,7 +307,7 @@ class UserMatch(BaseModel):
                 'type': 'match',
                 'user_id': str(user_b.id),
                 'user_profile_image_url': user_b.profile_image_url,
-                'conversation_id': conversation.id
+                'conversation_id': str(conversation.id)
             },
             mutable_content=True
         )
@@ -320,7 +320,7 @@ class UserMatch(BaseModel):
                 'type': 'match',
                 'user_id': str(user_a.id),
                 'user_profile_image_url': user_a.profile_image_url,
-                'conversation_id': conversation.id
+                'conversation_id': str(conversation.id)
             },
             mutable_content=True
         )
