@@ -44,7 +44,15 @@ def attachment_thumbnail_upload_to(instance, filename):
 
 
 class DirectMessageConversation(BaseModel):
-    latest_message = models.ForeignKey('DirectMessage', on_delete=models.SET_NULL, null=True, blank=True)
+    class Meta:
+        indexes = [
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    latest_message = models.ForeignKey('DirectMessage', on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     @classmethod
@@ -57,8 +65,17 @@ class DirectMessageConversation(BaseModel):
         return conversation
 
 class DirectMessageParticipant(BaseModel):
-    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='participants')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    class Meta:
+        unique_together = ('conversation', 'user')
+        indexes = [
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='participants', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
 
     read_at = models.DateTimeField(auto_now=True)
 
@@ -67,11 +84,16 @@ class DirectMessageParticipant(BaseModel):
 class DirectMessage(BaseModel):
     class Meta:
         indexes = [
-            GinIndex(fields=['content'])
+            GinIndex(fields=['content']),
+
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
         ]
 
-    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='messages', db_index=True)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
 
     content = models.JSONField(null=False, blank=False)
 
@@ -145,15 +167,23 @@ class DirectMessage(BaseModel):
 
 
 class DirectMessageAttachment(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     class AttachmentType(models.TextChoices):
         IMAGE = 'image'
         VIDEO = 'video'
         AUDIO = 'audio'
         OTHER = 'other'
 
-    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='attachments')
+    conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE, related_name='attachments', db_index=True)
     message = models.OneToOneField(DirectMessage, on_delete=models.CASCADE, related_name='attachment', null=True, blank=True)
-    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
 
     type = models.CharField(max_length=32, choices=AttachmentType.choices)
 

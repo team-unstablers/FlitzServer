@@ -67,6 +67,8 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
     MAX_PAYLOAD_LENGTH = 2048 # 최대 메시지 페이로드 길이 (2KB)
 
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ('-created_at',)
 
     def get_conversation_id(self):
         return self.kwargs['conversation_id']
