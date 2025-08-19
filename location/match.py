@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
@@ -26,6 +27,7 @@ class UserMatcher:
 
         # 오늘 하루동안 같은 사람을 발견한 기록이 있는지 확인합니다.
         prev_discover_history = self.discoverer.discovered.filter(
+            discovered=self.discovered,
             created_at__gt=discoverer_today_start
         )
 
@@ -133,6 +135,7 @@ class UserMatcher:
             if self.__prev_discover_history_exists():
                 # 이미 오늘 하루동안 같은 사람을 발견한 기록이 있으므로 무시합니다.
                 # (= 이제 상대편이 나를 발견할 때까지 기다립니다.)
+                print("prev discover history exists, skipping match")
                 return False
 
             # 나(discoverer)가 상대편(discovered)을 발견한 기록을 생성합니다.
@@ -140,7 +143,7 @@ class UserMatcher:
 
             # 30분 이내에 서로를 발견했는지 확인 (사용자의 현지 시간대 기준)
             discoverer_timezone = self.discoverer.user.location.timezone_obj
-            time_threshold = timezone.now().astimezone(discoverer_timezone) - timezone.timedelta(minutes=30)
+            time_threshold = timezone.now().astimezone(discoverer_timezone) - timedelta(minutes=30)
 
             # 반대로, 상대편(discovered)이 나(discoverer)를 발견했는지 확인합니다.
             history_opponent_qs = DiscoveryHistory.objects.filter(
@@ -156,6 +159,7 @@ class UserMatcher:
                 self.__finalize_match(history_self, history_opponent)
                 return True
 
+            print("history opponent not found, waiting for opponent to discover me")
             return False
 
     def __finalize_match(self, history_self: DiscoveryHistory, history_opponent: DiscoveryHistory):
