@@ -32,7 +32,7 @@ app.conf.beat_schedule = {
 
     'wake-up-apps': {
         'task': 'user.tasks.wake_up_apps',
-        'schedule': crontab(minute='*/2'),  # 매 2분마다 실행
+        'schedule': crontab(minute='*/20'),  # 매 20분마다 실행
     },
 }
 
