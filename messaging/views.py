@@ -30,7 +30,11 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
         return DirectMessageConversation.objects \
             .filter(deleted_at__isnull=True, participants__user=self.request.user) \
             .prefetch_related('participants') \
-            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment')
+            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment') \
+            .order_by(
+                '-latest_message__updated_at',  # 최신 메시지 기준으로 정렬
+                '-updated_at'  # 대화 자체의 업데이트 시간도 고려
+            )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
