@@ -19,11 +19,12 @@ LOCALHOST = os.environ.get('FLITZ_HOSTNAME', 'cheese-mbpr14.local')
 # Database for development
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 20,  # Increase timeout to 20 seconds
-        }
+        'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.environ.get('FLITZ_DB_HOST', 'localhost'),
+        'PORT': os.environ.get('FLITZ_DB_PORT', '5433'),
+        'NAME': os.environ.get('FLITZ_DB_NAME', 'flitzdev'),
+        'USER': os.environ.get('FLITZ_DB_USER', 'flitzdev'),
+        'PASSWORD': os.environ.get('FLITZ_DB_PASSWORD', 'flitzdev123'),
     },
 }
 
