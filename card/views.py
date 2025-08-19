@@ -28,7 +28,7 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
     serializer_class = CardDistributionSerializer
 
     filter_backends = [filters.OrderingFilter]
-    ordering = ('created_at', '-reveal_phase') # 가장 오래된 것부터 보여주되, reveal_phase는 DESC로
+    ordering = ('-reveal_phase', 'created_at') # 가장 오래된 것부터 보여주되, reveal_phase는 DESC로
 
     def get_queryset(self):
         return CardDistribution.objects.filter(
