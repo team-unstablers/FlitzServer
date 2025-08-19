@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.http import Http404
 from django.utils import timezone
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.exceptions import ValidationError, APIException
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -25,6 +25,7 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     serializer_class = DirectMessageConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
     ordering = ('-updated_at', '-latest_message__updated_at')
 
     def get_queryset(self):
