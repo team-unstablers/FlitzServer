@@ -67,6 +67,11 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
             if created:
                 UserLike.try_match_user(distribution.card.user, request.user)
 
+            _, created = CardFavoriteItem.objects.create(
+                user=request.user,
+                card=distribution.card
+            )
+
         return Response({'is_success': True}, status=200)
 
     @action(detail=True, methods=['PUT'], url_path='dislike')
