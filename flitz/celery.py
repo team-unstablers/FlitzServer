@@ -1,5 +1,6 @@
 import os
 
+from celery.schedules import crontab
 from django.conf import settings
 
 from celery import Celery
@@ -17,6 +18,23 @@ app.config_from_object(f'django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+app.conf.beat_schedule = {
+    'update-distribution-reveal-phase': {
+        'task': 'card.tasks.update_distribution_reveal_phase',
+        'schedule': crontab(minute='*/5'),  # 매 5분마다 실행
+    },
+
+    "perform-gc-asset-references": {
+        "task": "card.tasks.perform_gc_asset_references",
+        "schedule": crontab(hour=0, minute=0),  # 매일 자정에 실행
+    },
+
+    'wake-up-apps': {
+        'task': 'user.tasks.wake_up_apps',
+        'schedule': crontab(minute='*/2'),  # 매 2분마다 실행
+    },
+}
 
 
 @app.task(bind=True, ignore_result=True)
