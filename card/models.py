@@ -175,6 +175,23 @@ class CardFlag(BaseModel):
     resolved_at = models.DateTimeField(null=True, blank=True)
 
 class CardDistribution(BaseModel, LocationDistanceMixin):
+    class Meta:
+        # XXX: 개발 단계에서 같은 카드를 여러번 distribute하는건 사실 편하기 때문에 이걸 막아야 하는지는 잘 모르겠음
+        # unique_together = (('card', 'user'),)
+
+        indexes = [
+            models.Index(fields=['card']),
+            models.Index(fields=['user']),
+
+            models.Index(fields=['reveal_phase']),
+
+            models.Index(fields=['dismissed_at']),
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     class RevealPhase(models.IntegerChoices):
         # 카드가 아예 표시되지 않음
         HIDDEN = 0
