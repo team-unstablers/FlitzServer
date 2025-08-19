@@ -142,8 +142,7 @@ class UserMatcher:
             history_self = self.__create_discover_history()
 
             # 30분 이내에 서로를 발견했는지 확인 (사용자의 현지 시간대 기준)
-            discoverer_timezone = self.discoverer.user.location.timezone_obj
-            time_threshold = timezone.now().astimezone(discoverer_timezone) - timedelta(minutes=30)
+            time_threshold = timezone.now() - timedelta(minutes=30)
 
             # 반대로, 상대편(discovered)이 나(discoverer)를 발견했는지 확인합니다.
             history_opponent_qs = DiscoveryHistory.objects.filter(
