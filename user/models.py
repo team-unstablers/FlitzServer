@@ -206,6 +206,13 @@ class User(AbstractUser):
         # 파일명은 upload_to 함수가 자동으로 처리
         self.profile_image.save('thumbnail.jpg', thumbnail, save=True)
 
+    def is_blocked_by(self, other: 'User') -> bool:
+        """
+        다른 사용자가 현재 사용자를 차단했는지 확인합니다.
+        """
+
+        return other.blocked_users.filter(user=self).exists()
+
 class UserIdentity(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
 
@@ -271,6 +278,14 @@ class UserMatch(BaseModel):
 
     user_a = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
     user_b = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
+
+    @classmethod
+    def match_exists(cls, user_a: User, user_b: User) -> bool:
+        """
+        두 사용자 간의 매칭이 존재하는지 확인합니다.
+        """
+        user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
+        return cls.objects.filter(user_a=user_a, user_b=user_b).exists()
 
     @classmethod
     def create_match(cls, user_a: User, user_b: User):
