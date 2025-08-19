@@ -25,16 +25,13 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
 
     serializer_class = DirectMessageConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    ordering = ('-updated_at', '-latest_message__updated_at')
 
     def get_queryset(self):
         return DirectMessageConversation.objects \
             .filter(deleted_at__isnull=True, participants__user=self.request.user) \
             .prefetch_related('participants') \
-            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment') \
-            .order_by(
-                '-latest_message__updated_at',  # 최신 메시지 기준으로 정렬
-                '-updated_at'  # 대화 자체의 업데이트 시간도 고려
-            )
+            .select_related('latest_message', 'latest_message__sender', 'latest_message__attachment')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
