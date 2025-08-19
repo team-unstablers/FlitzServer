@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from user.serializers import PublicSimpleUserSerializer
 
-from card.models import Card, UserCardAsset, CardDistribution
+from card.models import Card, UserCardAsset, CardDistribution, CardFavoriteItem
 
 
 class PublicSelfUserCardAssetSerializer(serializers.ModelSerializer):
@@ -40,26 +40,23 @@ class PublicCardSerializer(serializers.ModelSerializer):
     def get_content(self, obj: Card):
         return obj.get_content_with_url()
 
-
-class PublicCardListSerializer(serializers.ModelSerializer):
-    """
-    자신의 카드 정보를 fetch할 때 사용되는 serializer
-    """
-    class Meta:
-        model = Card
-        fields = ('id', 'user', 'title', 'created_at', 'updated_at')
-
-    user = PublicSimpleUserSerializer()
-
-
-
 class CardDistributionSerializer(serializers.ModelSerializer):
     """
     카드 배포 정보를 fetch할 때 사용되는 serializer
     """
     class Meta:
         model = CardDistribution
-        fields = ('id', 'card', 'user')
+        fields = ('id', 'card', 'user', 'reveal_phase')
 
-    card = PublicCardListSerializer()
+    card = PublicCardSerializer()
     user = PublicSimpleUserSerializer()
+
+class CardFavoriteItemSerializer(serializers.ModelSerializer):
+    """
+    카드 즐겨찾기 정보를 fetch할 때 사용되는 serializer
+    """
+    class Meta:
+        model = CardFavoriteItem
+        fields = ('id', 'card')
+
+    card = PublicCardSerializer()

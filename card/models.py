@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Optional
 
 from dacite import from_dict
@@ -11,7 +12,8 @@ from uuid_v7.base import uuid7
 from card.objdef import CardObject, AssetReference, ImageElement
 from flitz.models import BaseModel
 from location.models import LocationDistanceMixin
-from user.models import User
+from user.models import User, UserMatch
+
 
 # Create your models here.
 
@@ -173,14 +175,31 @@ class CardFlag(BaseModel):
     resolved_at = models.DateTimeField(null=True, blank=True)
 
 class CardDistribution(BaseModel, LocationDistanceMixin):
+    class Meta:
+        # XXX: 개발 단계에서 같은 카드를 여러번 distribute하는건 사실 편하기 때문에 이걸 막아야 하는지는 잘 모르겠음
+        # unique_together = (('card', 'user'),)
+
+        indexes = [
+            models.Index(fields=['card']),
+            models.Index(fields=['user']),
+
+            models.Index(fields=['reveal_phase']),
+
+            models.Index(fields=['dismissed_at']),
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     class RevealPhase(models.IntegerChoices):
         # 카드가 아예 표시되지 않음
         HIDDEN = 0
 
-        # 45분 경과 후 흐릿하게 표시됨
+        # 흐릿하게 표시됨
         BLURRY_STRONG = 1
 
-        # 90분 경과 후 약간 덜 흐릿하게 표시됨
+        # 덜 흐릿하게 표시됨 (maybe unused)
         BLURRY_SOFT = 2
 
         # 완전히 표시됨
@@ -197,7 +216,6 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
     reveal_phase = models.IntegerField(default=0, choices=RevealPhase.choices)
 
     dismissed_at = models.DateTimeField(null=True, blank=True)
-
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     @property
@@ -208,54 +226,71 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
 
         return self.card.user
 
+    @transaction.atomic
     def update_reveal_phase(self):
         """
         카드의 공개 단계를 업데이트합니다.
         """
-        with transaction.atomic():
-            if self.reveal_phase == CardDistribution.RevealPhase.FULLY_REVEALED:
+        if self.reveal_phase == CardDistribution.RevealPhase.FULLY_REVEALED:
+            return
+
+        if not self.is_okay_to_reveal_assertive:
+            self.reveal_phase = CardDistribution.RevealPhase.HIDDEN
+            self.deleted_at = timezone.now()
+            return
+
+        if self.is_okay_to_reveal_immediately or self.is_okay_to_reveal_hard:
+            self.reveal_phase = CardDistribution.RevealPhase.FULLY_REVEALED
+            return
+        elif self.is_okay_to_reveal_soft:
+            if self.reveal_phase == CardDistribution.RevealPhase.HIDDEN:
+                self.reveal_phase = CardDistribution.RevealPhase.BLURRY_STRONG
                 return
-
-            if not self.is_okay_to_reveal_assertive:
-                return
-
-            if self.is_okay_to_reveal_soft or self.is_okay_to_reveal_hard:
-                self.reveal_phase = CardDistribution.RevealPhase.FULLY_REVEALED
-            else:
-                """
-                TODO: phased reveal을 도입할지 말지 고려해봐야 합니다.
-                
-                timediff = timezone.now() - self.created_at
-
-                if self.reveal_phase == CardDistribution.RevealPhase.HIDDEN and \
-                   timediff >= settings.CARD_REVEAL_TIME_BLURRY_STRONG:
-                    self.reveal_phase = CardDistribution.RevealPhase.BLURRY_STRONG
-                elif self.reveal_phase == CardDistribution.RevealPhase.BLURRY_STRONG and \
-                   timediff >= settings.CARD_REVEAL_TIME_BLURRY_SOFT:
-                    self.reveal_phase = CardDistribution.RevealPhase.BLURRY_SOFT
-                """
-
-                return
-            self.save()
 
 
     @property
     def is_okay_to_reveal_assertive(self) -> bool:
         """
-        (TODO: 조건 확실히 하세요)
         배포받은 카드가 사용자에게 공개될 수 있는지 확인합니다. (assertive)
         사용자의 안전을 최우선으로 하기 위해, 이 조건들을 선행으로 만족하지 않으면 soft / hard를 만족하더라도 카드를 공개하지 않습니다.
 
-        - opponent가 여전히 가까이 있으면 카드 표시하지 않음
-        - opponent가 **차단/제한 목록**에 등록되어 있으면 카드 표시하지 않음 (GC를 통해 삭제되어야 함)
         - opponent가 **shadowban** 처리되어 있으면 카드 표시하지 않음 (GC를 통해 삭제되어야 함)
+        - opponent가 **차단/제한 목록**에 등록되어 있으면 카드 표시하지 않음 (GC를 통해 삭제되어야 함)
+
+        NOTE: 이 조건 테스트에 실패한 경우 이 distribution은 즉시 삭제되어야 합니다.
         """
 
-        # opponent가 너무 가까이 있으면 카드 표시하지 않음
-        opponent_distance = self.distance_to(self.opponent.location)
-        cond_distance = opponent_distance >= settings.CARD_REVEAL_DISTANCE_ASSERTIVE
+        # 1. opponent가 shadowban 상태이면 카드를 표시하지 않는다
+        is_shadowbanned = False  # FIXME: shadowban 개념이 아직 없음
 
-        return cond_distance
+        if is_shadowbanned:
+            return False
+
+        # 2. opponent가 차단되어 있으면 카드를 표시하지 않는다
+        is_blocked = self.opponent.is_blocked_by(self.user)
+
+        if is_blocked:
+            return False
+
+
+        return True
+
+    @property
+    def is_okay_to_reveal_immediately(self) -> bool:
+        """
+        배포받은 카드가 사용자에게 즉시 공개될 수 있는지 확인합니다. (immediate)
+        """
+
+        # TODO: 1. 공식 카드 여부
+        is_official_card = False
+
+        # 2. 기존에 매칭된 적이 있는지
+        match_exists = UserMatch.match_exists(
+            user_a=self.user,
+            user_b=self.opponent
+        )
+
+        return is_official_card or match_exists
 
     @property
     def is_okay_to_reveal_soft(self) -> bool:
@@ -263,16 +298,23 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         배포받은 카드가 사용자에게 공개될 수 있는지 확인합니다. (soft)
 
         AND(
-            - 카드 교환 지점으로부터 2km 이상 멀어져야 함
-            - 카드 교환 시점으로부터 2시간 이상 경과해야 함
+            - 카드 교환 지점으로부터 300m 이상 멀어져야 함
+            - 카드 교환 시점으로부터 30분 이상 경과해야 함
         )
         """
 
+        if settings.DEBUG:
+            # 개발 환경에서는 soft reveal 조건을 무시합니다.
+            return True
+
+        REVEAL_DISTANCE_SOFT  = 300 # meters
+        REVEAL_TIMEDELTA_SOFT = timedelta(minutes=30)
+
         distance = self.distance_to(self.user.location)
-        cond_distance = distance >= settings.CARD_REVEAL_DISTANCE_SOFT
+        cond_distance = distance >= REVEAL_DISTANCE_SOFT
 
         utcnow = timezone.now()
-        cond_time = utcnow - self.created_at >= settings.CARD_REVEAL_TIME_SOFT
+        cond_time = (utcnow - self.created_at) >= REVEAL_TIMEDELTA_SOFT
 
         return cond_distance and cond_time
 
@@ -281,24 +323,30 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         """
         배포받은 카드가 사용자에게 공개될 수 있는지 확인합니다. (hard)
 
-        OR(
-            - 카드 교환 지점으로부터 15km 이상 멀어져야 함
-            - 카드 교환 시점으로부터 24시간 이상 경과해야 함
+        AND(
+            - 사용자의 마지막 위치로부터 500m 이상 멀어져야 함
+            OR(
+                - 카드 교환 지점으로부터 3km 이상 멀어져야 함
+                - 카드 교환 시점으로부터 3시간 이상 경과해야 함
+            )
         )
         """
 
+        REVEAL_USER_DISTANCE_HARD = 500 # meters
+
+        REVEAL_DISTANCE_HARD = 3000 # meters
+        REVEAL_TIMEDELTA_HARD = timedelta(hours=3)
+
+        user_distance = self.opponent.location.distance_to(self.user.location)
+        cond_user_distance = user_distance >= REVEAL_USER_DISTANCE_HARD
+
         distance = self.distance_to(self.user.location)
-        cond_distance = distance >= settings.CARD_REVEAL_DISTANCE_HARD
+        cond_distance = distance >= REVEAL_DISTANCE_HARD
 
         utcnow = timezone.now()
-        cond_time = utcnow - self.created_at >= settings.CARD_REVEAL_TIME_HARD
+        cond_time = (utcnow - self.created_at) >= REVEAL_TIMEDELTA_HARD
 
-        return cond_distance or cond_time
-
-
-
-
-
+        return cond_user_distance and (cond_distance or cond_time)
 
 class CardVote(BaseModel):
     class Meta:
@@ -313,3 +361,21 @@ class CardVote(BaseModel):
 
     vote_type = models.IntegerField(choices=VoteType.choices)
 
+class CardFavoriteItem(BaseModel):
+    """
+    사용자가 '좋아요'한 카드 아이템을 저장합니다.
+    """
+
+    class Meta:
+        unique_together = (('user', 'card'),)
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['card']),
+
+            models.Index(fields=['deleted_at']),
+        ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='card_collection_items')
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='collection_items')
+
+    deleted_at = models.DateTimeField(null=True, blank=True)

@@ -20,3 +20,15 @@ services:
       - "6380:6379"
     volumes:
         - ./redis-data:/data
+  db:
+      image: postgres:14
+      restart: always
+      # set shared memory limit when using docker-compose
+      shm_size: 128mb
+      ports:
+        - '5433:5432'
+      volumes:
+        - './db-data:/var/lib/postgresql/data'
+      environment:
+        POSTGRES_USER: 'flitzdev'
+        POSTGRES_PASSWORD: 'flitzdev123'

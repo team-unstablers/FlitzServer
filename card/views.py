@@ -4,6 +4,7 @@ from idlelib.pyparse import trans
 from dacite import from_dict
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 
 from rest_framework import permissions, viewsets, parsers
@@ -12,9 +13,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from card.objdef import CardObject, CardSchemaVersion, AssetReference
-from card.serializers import PublicCardSerializer, PublicCardListSerializer, PublicSelfUserCardAssetSerializer, \
-    CardDistributionSerializer, PublicWriteOnlyCardSerializer
-from card.models import Card, UserCardAsset, CardDistribution, CardVote
+from card.serializers import PublicCardSerializer, PublicSelfUserCardAssetSerializer, \
+    CardDistributionSerializer, PublicWriteOnlyCardSerializer, CardFavoriteItemSerializer
+from card.models import Card, UserCardAsset, CardDistribution, CardVote, CardFavoriteItem
 from flitz.pagination import CursorPagination
 from user.models import User, UserLike
 
@@ -28,10 +29,11 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return CardDistribution.objects.filter(
+            ~Q(reveal_phase=CardDistribution.RevealPhase.HIDDEN),
             user=self.request.user,
             dismissed_at=None,
-            deleted_at=None
-        )
+            deleted_at=None,
+        ).order_by('-created_at', '-reveal_phase')
 
     def create(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
@@ -47,29 +49,32 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['PUT'], url_path='like')
     def like(self, request, pk, *args, **kwargs):
         distribution: CardDistribution = self.get_object()
+
         with transaction.atomic():
-            CardVote.objects.create(
+            CardVote.objects.get_or_create(
                 card=distribution.card,
                 user=request.user,
 
-                vote_type = CardVote.VoteType.UPVOTE
+                defaults={
+                    'vote_type': CardVote.VoteType.UPVOTE
+                },
             )
 
             distribution.dismissed_at = datetime.now()
             distribution.save()
 
-            like_exists = UserLike.objects.filter(
+            _, created = UserLike.objects.get_or_create(
                 user=distribution.card.user,
                 liked_by=request.user
-            ).exists()
+            )
 
-            if not like_exists:
-                UserLike.objects.create(
-                    user=distribution.card.user,
-                    liked_by=request.user
-                )
-
+            if created:
                 UserLike.try_match_user(distribution.card.user, request.user)
+
+            _, created = CardFavoriteItem.objects.get_or_create(
+                user=request.user,
+                card=distribution.card
+            )
 
         return Response({'is_success': True}, status=200)
 
@@ -82,7 +87,7 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
                 card=distribution.card,
                 user=request.user,
 
-                vote_type = CardVote.VoteType.DOWNVOTE
+                vote_type=CardVote.VoteType.DOWNVOTE
             )
 
             distribution.dismissed_at = datetime.now()
@@ -90,39 +95,12 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
 
         return Response({'is_success': True}, status=200)
 
-
-
-
-class ReceivedCardViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_serializer_class(self):
-        return PublicCardListSerializer
-
-
-    def get_queryset(self):
-        return Card.objects.filter(
-            id__in = CardDistribution.objects.filter(
-                user=self.request.user,
-                deleted_at=None
-            ).values_list('card_id')
-        )
-
-    def create(self, request, *args, **kwargs):
-        raise UnsupportedOperationException()
-
-    def destroy(self, request, *args, **kwargs):
-        raise UnsupportedOperationException()
-
-    def update(self, request, *args, **kwargs):
-        raise UnsupportedOperationException()
-
 class PublicCardViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == 'list':
-            return PublicCardListSerializer
+            return PublicCardSerializer
 
         if self.action == 'update':
             return PublicWriteOnlyCardSerializer
@@ -248,3 +226,31 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         card.remove_orphaned_assets()
 
         return Response()
+
+
+class CardFavoriteViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CardFavoriteItemSerializer
+
+    def get_queryset(self):
+        return CardFavoriteItem.objects.filter(
+            user=self.request.user,
+            deleted_at=None
+        ).select_related('card', 'card__user')
+
+    def create(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()
+
+    def destroy(self, request, *args, **kwargs):
+        item: CardFavoriteItem = self.get_object()
+
+        if item.user != request.user:
+            raise UnsupportedOperationException()
+
+        item.deleted_at = datetime.now()
+        item.save()
+
+        return Response({'is_success': True}, status=200)
+
+    def update(self, request, *args, **kwargs):
+        raise UnsupportedOperationException()

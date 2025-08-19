@@ -27,7 +27,7 @@ from messaging.views import DirectMessageConversationViewSet, DirectMessageViewS
 from user.views import PublicUserViewSet
 from user_auth.views import request_token
 
-from card.views import PublicCardViewSet, ReceivedCardViewSet, CardDistributionViewSet
+from card.views import PublicCardViewSet, CardDistributionViewSet, CardFavoriteViewSet
 
 from location.views import FlitzWaveViewSet
 from safety.views import UserBlockViewSet, UserContactsTriggerViewSet
@@ -56,7 +56,8 @@ router.register(r'conversations', DirectMessageConversationViewSet, basename='Di
 router.register(r'wave', FlitzWaveViewSet, basename='FlitzWave')
 
 router.register(r'cards/distribution', CardDistributionViewSet, basename='CardDistribution')
-# router.register(r'cards/received', ReceivedCardViewSet, basename='ReceivedCard')
+router.register(r'cards/favorites', CardFavoriteViewSet, basename='CardFavorite')
+
 router.register(r'cards', PublicCardViewSet, basename='Card')
 
 router.register(r'blocks', UserBlockViewSet, basename='UserBlock')

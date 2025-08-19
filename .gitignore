@@ -178,5 +178,6 @@ pyrightconfig.json
 
 flitz-devenv/minio-data
 flitz-devenv/redis-data
+flitz-devenv/db-data
 
 *.p8

@@ -56,7 +56,7 @@ class UserMatcher:
 
         :note: 네트워크 조작을 통한 가짜 매칭을 방지하기 위한 조건입니다.
         """
-        pass
+        return True
 
 
     def __distribute_card(self, from_user: User, to_user: User, history: DiscoveryHistory):
@@ -69,6 +69,7 @@ class UserMatcher:
         ).exists()
 
         if already_distributed:
+            print("card already distributed to this user")
             return
 
         distribution = CardDistribution.objects.create(
@@ -80,6 +81,9 @@ class UserMatcher:
             altitude=history.altitude,
             accuracy=history.accuracy
         )
+
+        distribution.update_reveal_phase()
+        distribution.save(update_fields=['reveal_phase', 'deleted_at', 'updated_at'])
 
         return distribution
 
