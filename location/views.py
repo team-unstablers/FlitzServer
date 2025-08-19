@@ -128,7 +128,10 @@ class FlitzWaveViewSet(viewsets.ViewSet):
                 return Response({ 'is_success': True })
 
             # TODO: MatcherHistory 모델 생성, 왜 실패했는지 등등을 분석할 수 있으면 좋을 것 같아
+            print("trying to match users...")
             matched = matcher.try_match()
+
+            print(matched)
 
             return Response({
                 'is_success': True

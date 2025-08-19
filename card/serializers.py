@@ -46,7 +46,7 @@ class CardDistributionSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = CardDistribution
-        fields = ('id', 'card', 'user')
+        fields = ('id', 'card', 'user', 'reveal_phase')
 
     card = PublicCardSerializer()
     user = PublicSimpleUserSerializer()

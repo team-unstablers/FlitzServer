@@ -4,6 +4,7 @@ from idlelib.pyparse import trans
 from dacite import from_dict
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 
 from rest_framework import permissions, viewsets, parsers
@@ -28,10 +29,11 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return CardDistribution.objects.filter(
+            ~Q(reveal_phase=CardDistribution.RevealPhase.HIDDEN),
             user=self.request.user,
             dismissed_at=None,
-            deleted_at=None
-        )
+            deleted_at=None,
+        ).order_by('-created_at', '-reveal_phase')
 
     def create(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
@@ -49,11 +51,13 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
         distribution: CardDistribution = self.get_object()
 
         with transaction.atomic():
-            CardVote.objects.create(
+            CardVote.objects.get_or_create(
                 card=distribution.card,
                 user=request.user,
 
-                vote_type=CardVote.VoteType.UPVOTE
+                defaults={
+                    'vote_type': CardVote.VoteType.UPVOTE
+                },
             )
 
             distribution.dismissed_at = datetime.now()
@@ -67,7 +71,7 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
             if created:
                 UserLike.try_match_user(distribution.card.user, request.user)
 
-            _, created = CardFavoriteItem.objects.create(
+            _, created = CardFavoriteItem.objects.get_or_create(
                 user=request.user,
                 card=distribution.card
             )

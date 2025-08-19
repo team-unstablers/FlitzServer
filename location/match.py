@@ -82,6 +82,9 @@ class UserMatcher:
             accuracy=history.accuracy
         )
 
+        distribution.update_reveal_phase()
+        distribution.save(update_fields=['reveal_phase', 'deleted_at', 'updated_at'])
+
         return distribution
 
     def sanity_check(self) -> bool:
