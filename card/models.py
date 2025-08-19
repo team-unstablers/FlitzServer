@@ -303,6 +303,10 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         )
         """
 
+        if settings.DEBUG:
+            # 개발 환경에서는 soft reveal 조건을 무시합니다.
+            return True
+
         REVEAL_DISTANCE_SOFT  = 300 # meters
         REVEAL_TIMEDELTA_SOFT = timedelta(minutes=30)
 
