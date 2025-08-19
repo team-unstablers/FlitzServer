@@ -237,17 +237,14 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         if not self.is_okay_to_reveal_assertive:
             self.reveal_phase = CardDistribution.RevealPhase.HIDDEN
             self.deleted_at = timezone.now()
-            self.save(update_fields=['reveal_phase', 'deleted_at'])
             return
 
         if self.is_okay_to_reveal_immediately or self.is_okay_to_reveal_hard:
             self.reveal_phase = CardDistribution.RevealPhase.FULLY_REVEALED
-            self.save(update_fields=['reveal_phase'])
             return
         elif self.is_okay_to_reveal_soft:
             if self.reveal_phase == CardDistribution.RevealPhase.HIDDEN:
                 self.reveal_phase = CardDistribution.RevealPhase.BLURRY_STRONG
-                self.save(update_fields=['reveal_phase'])
                 return
 
 

@@ -4,8 +4,9 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db import transaction
 from django.db.models import Q, F
+from django.utils import timezone
 
-from card.models import Card, UserCardAsset
+from card.models import Card, UserCardAsset, CardDistribution
 
 logger: Logger = get_task_logger(__name__)
 
@@ -37,7 +38,83 @@ def perform_gc_asset_references():
                 card.gc_ran_at = timezone.now()
                 card.save(update_fields=['gc_ran_at'])
             except Exception as e:
+                # TODO: Log to sentry
                 logger.error(f"Error while performing GC on card {card.id}: {e}", exc_info=True)
                 continue
 
     logger.info('perform_gc_asset_references task completed')
+
+@shared_task
+def update_distribution_reveal_phase():
+    """
+    카드 배포의 공개 단계 (reveal phase)를 업데이트합니다.
+    5분에 한번씩 실행합니다.
+    """
+
+    # 300개씩 묶어서 처리합니다.
+    CHUNK_SIZE = 300
+
+    logger.info('update_distribution_reveal_phase task started')
+
+    queryset = CardDistribution.objects.filter(
+        ~Q(reveal_phase=CardDistribution.RevealPhase.FULLY_REVEALED),
+        dismissed_at__isnull=True,
+        deleted_at__isnull=True,
+    ).select_related(
+        'card',
+        'card__user',
+        'card__user__location',
+        'user__location',
+     )
+
+    iterator = queryset.iterator(chunk_size=CHUNK_SIZE)
+    changed_instances = []
+    
+    # 통계용 카운터
+    total_count = 0
+    updated_count = 0
+    error_count = 0
+
+    for distribution in iterator:
+        total_count += 1
+        try:
+            # 변경 전 상태 저장
+            old_phase = distribution.reveal_phase
+            old_deleted_at = distribution.deleted_at
+            
+            # reveal phase 업데이트 (save는 안 함)
+            distribution.update_reveal_phase()
+            
+            # 실제로 변경되었는지 확인
+            if (distribution.reveal_phase != old_phase or 
+                distribution.deleted_at != old_deleted_at):
+                changed_instances.append(distribution)
+                updated_count += 1
+                
+                # 메모리 절약을 위해 CHUNK_SIZE만큼 쌓이면 중간에 bulk_update
+                if len(changed_instances) >= CHUNK_SIZE:
+                    CardDistribution.objects.bulk_update(
+                        changed_instances,
+                        ['reveal_phase', 'deleted_at', 'updated_at'],
+                        batch_size=CHUNK_SIZE
+                    )
+                    changed_instances.clear()  # 리스트 비우기
+                    
+        except Exception as e:
+            error_count += 1
+            # TODO: Log to sentry
+            logger.error(f"Error while updating reveal phase for distribution {distribution.id}: {e}", exc_info=True)
+            continue
+
+    # 남은 인스턴스들 처리
+    if changed_instances:
+        CardDistribution.objects.bulk_update(
+            changed_instances,
+            ['reveal_phase', 'deleted_at', 'updated_at'],
+            batch_size=CHUNK_SIZE
+        )
+
+    logger.info(
+        f'update_distribution_reveal_phase task completed: '
+        f'total={total_count}, updated={updated_count}, errors={error_count}'
+    )
