@@ -12,11 +12,11 @@ import os
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
-import messaging.routing
-
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flitz.settings_dev')
 
 app_asgi = get_asgi_application()
+
+import messaging.routing
 
 application = ProtocolTypeRouter({
     "http": app_asgi,
