@@ -259,7 +259,7 @@ class UserLike(BaseModel):
     def try_match_user(cls, user_a: User, user_b: User):
         user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
 
-        match_exists = UserMatch.objects.filter(user_a=user_a, user_b=user_b).exists()
+        match_exists = UserMatch.match_exists(user_a, user_b)
 
         if match_exists:
             # assertion failed: match_exists == False

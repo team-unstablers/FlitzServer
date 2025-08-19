@@ -1,3 +1,5 @@
+import logging
+
 from django.db import transaction
 
 from rest_framework import permissions, viewsets, parsers, status
@@ -14,6 +16,8 @@ from location.serializers import DiscoveryReportSerializer, UpdateLocationSerial
 # Create your views here.
 
 class FlitzWaveViewSet(viewsets.ViewSet):
+    logger: logging.Logger = logging.getLogger(__name__)
+
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='discovery/start')
     def start_discovery(self, request: Request):
         """
@@ -116,11 +120,11 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             matcher = UserMatcher(session, discovered_session)
 
             if not matcher.sanity_check():
-                # TODO: Sentry.capture_message('FlitzWave: sanity check failed')
+                self.logger.warning(f"FlitzWave: sanity check failed for user {request.user.id} with session {session.id} and discovered session {discovered_session.id}")
                 return Response({ 'is_success': True })
 
             if not matcher.prerequisite_check():
-                # TODO: Sentry.capture_message('FlitzWave: prerequisite check failed')
+                self.logger.warning(f"FlitzWave: prerequisite check failed for user {request.user.id} with session {session.id} and discovered session {discovered_session.id}")
                 return Response({ 'is_success': True })
 
             # TODO: MatcherHistory 모델 생성, 왜 실패했는지 등등을 분석할 수 있으면 좋을 것 같아

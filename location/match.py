@@ -56,7 +56,7 @@ class UserMatcher:
 
         :note: 네트워크 조작을 통한 가짜 매칭을 방지하기 위한 조건입니다.
         """
-        pass
+        return True
 
 
     def __distribute_card(self, from_user: User, to_user: User, history: DiscoveryHistory):
