@@ -69,6 +69,7 @@ class UserMatcher:
         ).exists()
 
         if already_distributed:
+            print("card already distributed to this user")
             return
 
         distribution = CardDistribution.objects.create(
