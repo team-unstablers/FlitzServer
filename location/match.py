@@ -22,13 +22,12 @@ class UserMatcher:
         # 사용자의 위치 정보로부터 시간대를 결정합니다
         discoverer_timezone = self.discoverer.user.location.timezone_obj
 
-        # 해당 시간대의 '오늘' 시작 시간을 계산합니다
-        discoverer_today_start = get_today_start_in_timezone(discoverer_timezone)
+        # 30분 이내에 발견한 기록이 있는가
+        time_threshold = timezone.now() - timedelta(minutes=30)
 
-        # 오늘 하루동안 같은 사람을 발견한 기록이 있는지 확인합니다.
         prev_discover_history = self.discoverer.discovered.filter(
             discovered=self.discovered,
-            created_at__gt=discoverer_today_start
+            created_at__gt=time_threshold,
         )
 
         return prev_discover_history.exists()
@@ -133,7 +132,7 @@ class UserMatcher:
 
         with transaction.atomic():
             if self.__prev_discover_history_exists():
-                # 이미 오늘 하루동안 같은 사람을 발견한 기록이 있으므로 무시합니다.
+                # 이미 이전 30분동안 같은 사람을 발견한 기록이 있으므로 무시합니다.
                 # (= 이제 상대편이 나를 발견할 때까지 기다립니다.)
                 print("prev discover history exists, skipping match")
                 return False
