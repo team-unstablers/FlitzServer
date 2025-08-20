@@ -24,7 +24,9 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
             jwt_payload = jwt.decode(token, key= settings.SECRET_KEY, algorithms=['HS256'])
             session_id = jwt_payload['sub']
 
-            session: UserSession = UserSession.objects.select_related('user').filter(id=session_id).first()
+            session: UserSession = (UserSession.objects.filter(id=session_id)
+                                    .select_related('user', 'user__location')
+                                    .first())
 
             if session is None or session.invalidated_at is not None:
                 return None

@@ -19,9 +19,6 @@ class UserMatcher:
         오늘 하루동안 같은 사람을 발견한 기록이 있는지 확인합니다.
         """
 
-        # 사용자의 위치 정보로부터 시간대를 결정합니다
-        discoverer_timezone = self.discoverer.user.location.timezone_obj
-
         # 30분 이내에 발견한 기록이 있는가
         time_threshold = timezone.now() - timedelta(minutes=30)
 
@@ -65,7 +62,8 @@ class UserMatcher:
         사용자의 main_card를 상대편에게 배포합니다.
         """
 
-        already_distributed = from_user.main_card.distributions.filter(
+        # only()를 사용하여 필요한 필드만 조회
+        already_distributed = from_user.main_card.distributions.only('id').filter(
             user=to_user
         ).exists()
 

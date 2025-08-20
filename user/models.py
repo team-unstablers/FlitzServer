@@ -137,26 +137,39 @@ class User(AbstractUser):
 
         self.primary_session.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content)
 
-    def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None):
+    def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None, force_timezone_update: bool=False):
         from location.models import UserLocation
+        from location.utils.distance import measure_distance
 
         with transaction.atomic():
             location, created = UserLocation.objects.get_or_create(
                 defaults={
-                    'latitude': 0.0,
-                    'longitude': 0.0,
-                    'altitude': 0.0,
-                    'accuracy': 0.0,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'altitude': altitude or 0.0,
+                    'accuracy': accuracy or 0.0,
                 },
                 user=self
             )
 
-            location.latitude = latitude
-            location.longitude = longitude
-            location.altitude = altitude
-            location.accuracy = accuracy
+            if not created:
+                # 기존 위치와의 거리 계산 (시간대 변경 여부 판단용)
+                old_location = (location.latitude, location.longitude)
+                new_location = (latitude, longitude)
+                distance = measure_distance(old_location, new_location)
+                
+                location.latitude = latitude
+                location.longitude = longitude
+                location.altitude = altitude
+                location.accuracy = accuracy
 
-            location.update_timezone()
+                # 10km 이상 이동했거나 강제 업데이트 플래그가 설정된 경우에만 시간대 업데이트
+                if distance > 10.0 or force_timezone_update:
+                    location.update_timezone()
+            else:
+                # 새로 생성된 경우에는 시간대 업데이트
+                location.update_timezone()
+                
             location.save()
 
         return location
@@ -181,13 +194,13 @@ class User(AbstractUser):
 
         # FIXME: 이거 수정 필요
 
-        if distance <= 500: # 500m 이내
+        if distance <= 0.5: # 500m 이내
             return 'nearest'
-        elif distance <= 1500: # 1.5km 이내
+        elif distance <= 1.500: # 1.5km 이내
             return 'near'
-        elif distance <= 5000: # 5km 이내
+        elif distance <= 5.0: # 5km 이내
             return 'medium'
-        elif distance <= 30000: # 30km 이내
+        elif distance <= 30.0: # 30km 이내
             return 'far'
         else: # 20km 이상
             return 'farthest'
@@ -211,7 +224,7 @@ class User(AbstractUser):
         다른 사용자가 현재 사용자를 차단했는지 확인합니다.
         """
 
-        return other.blocked_users.filter(user=self).exists()
+        return other.blocked_users.only('id').filter(user=self).exists()
 
 class UserIdentity(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)

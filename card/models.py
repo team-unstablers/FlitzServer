@@ -307,7 +307,7 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
             # 개발 환경에서는 soft reveal 조건을 무시합니다.
             return True
 
-        REVEAL_DISTANCE_SOFT  = 300 # meters
+        REVEAL_DISTANCE_SOFT  = 0.3 # 300 meters
         REVEAL_TIMEDELTA_SOFT = timedelta(minutes=30)
 
         distance = self.distance_to(self.user.location)
@@ -332,9 +332,9 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         )
         """
 
-        REVEAL_USER_DISTANCE_HARD = 500 # meters
+        REVEAL_USER_DISTANCE_HARD = 0.5 # 500 meters
 
-        REVEAL_DISTANCE_HARD = 3000 # meters
+        REVEAL_DISTANCE_HARD = 0.3 # 300 meters
         REVEAL_TIMEDELTA_HARD = timedelta(hours=3)
 
         user_distance = self.opponent.location.distance_to(self.user.location)

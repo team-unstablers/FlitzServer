@@ -3,9 +3,10 @@ from timezonefinder import TimezoneFinder
 
 import pytz
 
+tf = TimezoneFinder()
+
 def get_timezone_from_coordinates(latitude, longitude) -> pytz.timezone:
     """위도/경도로부터 시간대를 결정합니다."""
-    tf = TimezoneFinder()
     timezone_str = tf.timezone_at(lat=latitude, lng=longitude)
     if timezone_str:
         return pytz.timezone(timezone_str)
