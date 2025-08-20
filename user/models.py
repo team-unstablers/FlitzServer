@@ -338,6 +338,13 @@ class UserMatch(BaseModel):
             mutable_content=True
         )
 
+    @classmethod
+    def delete_match(cls, user_a: User, user_b: User):
+        user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
+
+        cls.objects.filter(user_a=user_a, user_b=user_b).delete()
+
+
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.CharField(max_length=64, null=False, blank=False)

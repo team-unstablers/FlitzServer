@@ -3,15 +3,19 @@ import uuid
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from twisted.words.im.basechat import Conversation
 
+from card.models import CardDistribution, CardFavoriteItem
 from flitz.thumbgen import generate_thumbnail
-from safety.models import UserWaveSafetyZone
+from messaging.models import DirectMessageConversation
+from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
-from user.models import User, UserIdentity
+from user.models import User, UserIdentity, UserMatch
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer
 
@@ -168,6 +172,70 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = PublicUserSerializer(user)
 
         return Response(serializer.data)
+
+    @action(detail=True, methods=['PUT', 'DELETE'], url_path='block')
+    def dispatch_block_user(self, request, *args, **kwargs):
+        if request.method == 'PUT':
+            return self.block_user(request, *args, **kwargs)
+        elif request.method == 'PATCH':
+            return self.unblock_user(request, *args, **kwargs)
+        else:
+            raise UnsupportedOperationException()
+
+    def block_user(self, request, *args, **kwargs):
+        user = self.request.user
+        target_user = self.get_object()
+
+        if user.id == target_user.id:
+            raise UnsupportedOperationException()
+
+        with transaction.atomic():
+            _, created = UserBlock.objects.get_or_create(
+                user=target_user,
+                blocked_by=user,
+
+                defaults={
+                    'reason': UserBlock.Reason.BY_USER
+                }
+            )
+
+            now = timezone.now()
+
+            UserMatch.delete_match(user, target_user)
+
+            DirectMessageConversation.objects.filter(
+                participants__user=[user, target_user],
+            ).update(
+                deleted_at=now,
+            )
+
+            CardDistribution.objects.filter(card__user=target_user, user=user).update(
+                deleted_at=now,
+            )
+
+            CardFavoriteItem.objects.filter(card__user=target_user, user=user).update(
+                deleted_at=now,
+            )
+
+        return Response({'is_success': True}, status=201)
+
+    def unblock_user(self, request, *args, **kwargs):
+        user = self.request.user
+        target_user = self.get_object()
+
+        if user.id == target_user.id:
+            raise UnsupportedOperationException()
+
+        with transaction.atomic():
+            UserBlock.objects.filter(
+                user=target_user,
+                blocked_by=user
+            ).delete()
+
+        return Response({'is_success': True}, status=204)
+
+
+
 
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request, *args, **kwargs):
