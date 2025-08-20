@@ -111,7 +111,7 @@ class Card(BaseModel):
 
         with transaction.atomic():
             for reference in references_in_db:
-                if reference.id not in current_references_ids:
+                if str(reference.id) not in current_references_ids:
                     reference.delete_asset()
 
     def get_content_with_url(self) -> dict:
