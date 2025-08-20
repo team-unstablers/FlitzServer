@@ -125,14 +125,14 @@ class Card(BaseModel):
                     reference.delete_asset()
 
     def get_content_with_url(self) -> dict:
-        asset_references_queryset = self.asset_references.filter(deleted_at__isnull=True)
+        asset_references = self.asset_references
         card_obj = from_dict(data_class=CardObject, data=self.content)
 
         def resolve_asset_url(asset: Optional[AssetReference]) -> Optional[str]:
             if asset is None:
                 return None
 
-            asset_reference = asset_references_queryset.filter(id=asset.id).first()
+            asset_reference = next(filter(lambda x: x.id == asset.id, asset_references), None)
             if asset_reference is None or (not asset_reference.object.name):
                 return None
 
