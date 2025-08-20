@@ -226,6 +226,27 @@ class User(AbstractUser):
 
         return other.blocked_users.only('id').filter(user=self).exists()
 
+class UserSettings(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+        ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+
+    messaging_notifications_enabled = models.BooleanField(default=True)
+    match_notifications_enabled = models.BooleanField(default=True)
+    notice_notifications_enabled = models.BooleanField(default=True)
+    marketing_notifications_enabled = models.BooleanField(default=False)
+    # 대한민국 정보통신망법 제 50조 8항 / 시행령 제62조의3에 의해 마케팅 푸시의 경우 수신 동의 확인이 의무화 되어 있습니다
+    # 수신 동의를 받은 날부터 2년마다 아래 내용을 반드시 표시해야 합니다
+    # 1. 전송자의 명칭 (회사명 / 서비스명)
+    # 2. 수신 동의 날짜 (YYYY-MM-DD)
+    # 3. 수신동의를 한 사실
+    # 4. 수신동의를 철회할 수 있는 방법
+    # 안 지키면 3000만원 이하의 과태료에 처해질 수 있습니다
+    marketing_notifications_enabled_at = models.DateTimeField(null=True, blank=True)
+
 class UserIdentity(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
 

@@ -16,9 +16,9 @@ from flitz.thumbgen import generate_thumbnail
 from messaging.models import DirectMessageConversation
 from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
-from user.models import User, UserIdentity, UserMatch
+from user.models import User, UserIdentity, UserMatch, UserSettings
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
-    UserRegistrationSerializer
+    UserRegistrationSerializer, UserSettingsSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from user_auth.models import UserSession
@@ -99,6 +99,42 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(serializer.data)
         else:
             return Response(serializer.errors, status=400)
+
+    @action(detail=False, methods=['GET', 'PATCH'], url_path='self/settings')
+    def dispatch_self_settings(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            return self.get_self_settings(request, *args, **kwargs)
+        elif request.method == 'PATCH':
+            return self.patch_self_settings(request, *args, **kwargs)
+        else:
+            raise UnsupportedOperationException()
+
+    def get_self_settings(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        settings, created = UserSettings.objects.get_or_create(
+            user=user
+        )
+
+        serializer = UserSettingsSerializer(settings)
+
+        return Response(serializer.data)
+
+    def patch_self_settings(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        settings, created = UserSettings.objects.get_or_create(
+            user=user
+        )
+
+        serializer = UserSettingsSerializer(settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=400)
+
 
 
     @action(detail=False, methods=['GET', 'PATCH'], url_path='self/wave-safety-zone')

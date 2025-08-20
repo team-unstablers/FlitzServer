@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from user.models import User, UserIdentity
+from user.models import User, UserIdentity, UserSettings
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
@@ -112,3 +112,38 @@ class UserRegistrationSerializer(serializers.Serializer):
     title = serializers.CharField(allow_blank=False, max_length=20)
     bio = serializers.CharField(allow_blank=False, max_length=600)
     hashtags = HashtagListField()
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+    """
+    자신의 설정 정보를 fetch하거나 수정할 때 사용되는 serializer
+    """
+
+    class Meta:
+        model = UserSettings
+        fields = (
+            'messaging_notifications_enabled',
+            'match_notifications_enabled',
+            'notice_notifications_enabled',
+            'marketing_notifications_enabled',
+
+            'marketing_notifications_enabled_at',
+        )
+
+        read_only_fields = (
+            'marketing_notifications_enabled_at',
+        )
+    
+    def update(self, instance, validated_data):
+        # marketing_notifications_enabled 변경 시 날짜 자동 업데이트
+        if 'marketing_notifications_enabled' in validated_data:
+            from django.utils import timezone
+            
+            if validated_data['marketing_notifications_enabled']:
+                # True로 변경되고, 기존에 동의 날짜가 없으면 현재 시간 설정
+                if not instance.marketing_notifications_enabled_at:
+                    instance.marketing_notifications_enabled_at = timezone.now()
+            else:
+                # False로 변경되면 동의 날짜 제거
+                instance.marketing_notifications_enabled_at = None
+        
+        return super().update(instance, validated_data)
