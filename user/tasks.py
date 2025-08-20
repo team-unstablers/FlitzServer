@@ -8,15 +8,15 @@ from django.db.models import Q
 from django.utils import timezone
 
 from flitz.apns import APNS
-from user.models import User
+from user.models import User, PushNotificationType
 from user_auth.models import UserSession
 
 logger: Logger = get_task_logger(__name__)
 
 @shared_task
-def send_push_message(user_id: UUID, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
+def send_push_message(user_id: UUID, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
     user = User.objects.get(id=user_id)
-    user.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content)
+    user.send_push_message(type, title, body, data, thread_id=thread_id, mutable_content=mutable_content)
 
 @shared_task
 def wake_up_apps():

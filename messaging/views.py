@@ -97,7 +97,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
 
         return DirectMessage.objects \
             .filter(conversation_id__exact=self.get_conversation_id(), deleted_at__isnull=True) \
-            .select_related('sender', 'attachment')
+            .select_related('sender', 'sender__settings', 'attachment')
 
     def create(self, request: Request, *args, **kwargs):
         payload_length = int(request.META.get('CONTENT_LENGTH', '0'))

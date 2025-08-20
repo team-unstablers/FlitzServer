@@ -36,6 +36,8 @@ class UserGenderBit(models.IntegerChoices):
     def ALL():
         return UserGenderBit.MAN | UserGenderBit.WOMAN | UserGenderBit.NON_BINARY
 
+# 푸시 알림 유형
+PushNotificationType = Literal['message', 'match', 'notice', 'marketing']
 
 OnlineStatus  = Literal['online', 'recently', 'offline']
 
@@ -125,7 +127,7 @@ class User(AbstractUser):
         self.phone_number = normalized_phone_number
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
-    def send_push_message(self, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
+    def send_push_message(self, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
         """
         사용자에게 푸시 메시지를 보냅니다.
 
@@ -133,6 +135,9 @@ class User(AbstractUser):
         """
 
         if not self.primary_session:
+            return
+
+        if not self.settings.allows_push(type):
             return
 
         self.primary_session.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content)
@@ -247,6 +252,21 @@ class UserSettings(BaseModel):
     # 안 지키면 3000만원 이하의 과태료에 처해질 수 있습니다
     marketing_notifications_enabled_at = models.DateTimeField(null=True, blank=True)
 
+    def allows_push(self, type: PushNotificationType) -> bool:
+        """
+        사용자가 특정 유형의 푸시 알림을 허용하는지 확인합니다.
+        """
+        if type == 'message':
+            return self.messaging_notifications_enabled
+        elif type == 'match':
+            return self.match_notifications_enabled
+        elif type == 'notice':
+            return self.notice_notifications_enabled
+        elif type == 'marketing':
+            return self.marketing_notifications_enabled
+        else:
+            return True
+
 class UserIdentity(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
 
@@ -339,6 +359,7 @@ class UserMatch(BaseModel):
         # TODO: i18n
         user_tasks.send_push_message.delay_on_commit(
             user_a.id,
+            'match',
             '매칭 성공!',
             f'{user_b.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {
@@ -352,6 +373,7 @@ class UserMatch(BaseModel):
 
         user_tasks.send_push_message.delay_on_commit(
             user_b.id,
+            'match',
             '매칭 성공!',
             f'{user_a.display_name}님과 매칭되었습니다! 지금 바로 대화를 시작해보세요!',
             {

@@ -138,6 +138,7 @@ class DirectMessage(BaseModel):
         for participant_id in participants:
             user_tasks.send_push_message.delay_on_commit(
                 participant_id,
+                'message',
                 notification_title,
                 notification_body,
                 {
