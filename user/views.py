@@ -178,7 +178,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     def dispatch_block_user(self, request, *args, **kwargs):
         if request.method == 'PUT':
             return self.block_user(request, *args, **kwargs)
-        elif request.method == 'PATCH':
+        elif request.method == 'DELETE':
             return self.unblock_user(request, *args, **kwargs)
         else:
             raise UnsupportedOperationException()
