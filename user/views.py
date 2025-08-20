@@ -82,7 +82,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({
                 'is_success': False,
                 'reason': e.detail,
-            }, status=400)
+            }, status=299) # HACK: 앱에서 validate()를 빼야 합니다
 
         return Response({'is_success': True}, status=200)
 
