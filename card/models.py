@@ -125,7 +125,7 @@ class Card(BaseModel):
                     reference.delete_asset()
 
     def get_content_with_url(self) -> dict:
-        asset_references = self.asset_references
+        asset_references = self.asset_references.all()
         card_obj = from_dict(data_class=CardObject, data=self.content)
 
         def resolve_asset_url(asset: Optional[AssetReference]) -> Optional[str]:
