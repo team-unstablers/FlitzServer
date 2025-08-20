@@ -24,6 +24,12 @@ class UserLocation(models.Model, LocationDistanceMixin):
     class Meta:
         get_latest_by = 'created_at'
 
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='location')
 
     latitude = models.FloatField(null=False, blank=False)
@@ -46,10 +52,23 @@ class UserLocation(models.Model, LocationDistanceMixin):
 
 
 class DiscoverySession(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+        ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='discovery_session')
     is_active = models.BooleanField(default=False)
 
 class DiscoveryHistory(BaseModel, LocationDistanceMixin):
+    class Meta:
+        indexes = [
+            models.Index(fields=['session', 'discovered']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     session = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered')
     discovered = models.ForeignKey(DiscoverySession, on_delete=models.CASCADE, related_name='discovered_by')
 
