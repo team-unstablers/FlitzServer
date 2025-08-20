@@ -205,9 +205,10 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             UserMatch.delete_match(user, target_user)
 
             DirectMessageConversation.objects.filter(
-                Q(participants__user=target_user),
-                Q(participants__user=user),
-            ).update(
+                participants__user=user
+            ).filter(
+                participants__user=target_user
+            ).distinct().update(
                 deleted_at=now,
             )
 
