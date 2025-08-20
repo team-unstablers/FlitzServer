@@ -2,6 +2,7 @@ import uuid
 
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
@@ -204,7 +205,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             UserMatch.delete_match(user, target_user)
 
             DirectMessageConversation.objects.filter(
-                participants__user=[user, target_user],
+                Q(participants__user=target_user),
+                Q(participants__user=user),
             ).update(
                 deleted_at=now,
             )

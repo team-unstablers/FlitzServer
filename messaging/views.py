@@ -200,7 +200,9 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
         try:
             return DirectMessageConversation.objects.get(
                 id__exact=self.get_conversation_id(),
-                participants__user=self.request.user
+                participants__user=self.request.user,
+
+                deleted_at__isnull=True
             )
         except:
             raise Http404()
