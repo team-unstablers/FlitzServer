@@ -145,8 +145,8 @@ class UserMatcher:
 
             # 반대로, 상대편(discovered)이 나(discoverer)를 발견했는지 확인합니다.
             history_opponent_qs = DiscoveryHistory.objects.filter(
-                session=self.discovered,
-                discovered=self.discoverer,
+                session__user=self.discovered.user,
+                discovered__user=self.discoverer.user,
                 created_at__gt=time_threshold
             )
 
