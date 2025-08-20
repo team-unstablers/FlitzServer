@@ -85,7 +85,14 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         return DirectMessageReadOnlySerializer
 
     def get_queryset(self):
-        if not self.get_conversation().participants.filter(user=self.request.user).exists():
+        is_joined = DirectMessageParticipant.objects.filter(
+            conversation_id__exact=self.get_conversation_id(),
+            user=self.request.user,
+            deleted_at__isnull=True
+        ).only('id').exists()
+
+        if not is_joined:
+            # 사용자가 해당 대화에 참여하지 않는 경우 404 에러 발생
             raise Http404()
 
         return DirectMessage.objects \
