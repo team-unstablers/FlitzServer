@@ -89,6 +89,16 @@ class OfficialCardAssetPurchase(BaseModel):
     refund_reason = models.CharField(max_length=128, null=True, blank=True)
 
 class Card(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+
+            models.Index(fields=['gc_ran_at']),
+
+            models.Index(fields=['deleted_at']),
+            models.Index(fields=['banned_at']),
+        ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cards')
 
     title = models.CharField(max_length=32, null=False, blank=False)
@@ -138,6 +148,16 @@ class Card(BaseModel):
         return card_obj.as_dict()
 
 class UserCardAsset(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['card']),
+            models.Index(fields=['user']),
+
+            models.Index(fields=['deleted_at']),
+            models.Index(fields=['banned_at']),
+        ]
+
+
     class AssetType(models.TextChoices):
         IMAGE = 'image'
         VIDEO = 'video'
