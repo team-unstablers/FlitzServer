@@ -143,7 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'user.User'
 
 DEFAULT_RENDERER_CLASSES = (
-    'rest_framework.renderers.JSONRenderer',
+    'drf_orjson_renderer.renderers.ORJSONRenderer',
 )
 
 if DEBUG:
