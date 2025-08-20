@@ -108,7 +108,7 @@ class User(AbstractUser):
 
         if diff.seconds < (60 * 5):
             return 'online'
-        elif diff.seconds < (60 * 60 * 12):
+        elif diff.seconds < (60 * 60 * 6):
             return 'recently'
         else:
             return 'offline'
