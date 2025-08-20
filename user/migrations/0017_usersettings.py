@@ -7,6 +7,20 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_user_settings_for_existing_users(apps, schema_editor):
+    User = apps.get_model('user', 'User')
+    UserSettings = apps.get_model('user', 'UserSettings')
+    
+    for user in User.objects.all():
+        UserSettings.objects.get_or_create(user=user)
+
+
+def reverse_create_user_settings(apps, schema_editor):
+    # 역방향 마이그레이션 시 아무것도 하지 않음
+    # UserSettings 모델 자체가 삭제되므로 별도 처리 불필요
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -50,5 +64,9 @@ class Migration(migrations.Migration):
                     models.Index(fields=["user"], name="user_userse_user_id_f4d286_idx")
                 ],
             },
+        ),
+        migrations.RunPython(
+            create_user_settings_for_existing_users,
+            reverse_create_user_settings,
         ),
     ]
