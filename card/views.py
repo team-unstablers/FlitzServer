@@ -31,12 +31,19 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
     ordering = ('-reveal_phase', 'created_at') # 가장 오래된 것부터 보여주되, reveal_phase는 DESC로
 
     def get_queryset(self):
-        return CardDistribution.objects.filter(
+        queryset = CardDistribution.objects.filter(
             ~Q(reveal_phase=CardDistribution.RevealPhase.HIDDEN),
             user=self.request.user,
             dismissed_at=None,
             deleted_at=None,
+        ).select_related(
+            'card',
+            'card__user', 'card__user__location'
+        ).prefetch_related(
+            'card__asset_references'
         )
+
+        return queryset
 
     def create(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
@@ -112,7 +119,7 @@ class PublicCardViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Card.objects.filter(deleted_at=None) \
-            .select_related('user') \
+            .select_related('user', 'user__location') \
             .prefetch_related('asset_references')
 
         if self.action == 'list':
@@ -239,7 +246,12 @@ class CardFavoriteViewSet(viewsets.ModelViewSet):
         return CardFavoriteItem.objects.filter(
             user=self.request.user,
             deleted_at=None
-        ).select_related('card', 'card__user')
+        ).select_related(
+            'card',
+            'card__user', 'card__user__location'
+        ).prefetch_related(
+            'card__asset_references'
+        )
 
     def create(self, request, *args, **kwargs):
         raise UnsupportedOperationException()
