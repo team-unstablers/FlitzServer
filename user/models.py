@@ -304,6 +304,10 @@ class UserMatch(BaseModel):
     def create_match(cls, user_a: User, user_b: User):
         user_a, user_b = sorted([user_a, user_b], key=lambda x: x.id)
 
+        if user_a.is_blocked_by(user_b) or user_b.is_blocked_by(user_a):
+            # 차단된 사용자 간의 매칭은 불가능
+            return
+
         cls.objects.create(user_a=user_a, user_b=user_b)
 
         from messaging.models import DirectMessageConversation
