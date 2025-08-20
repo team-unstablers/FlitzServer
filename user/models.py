@@ -194,9 +194,9 @@ class User(AbstractUser):
 
         # FIXME: 이거 수정 필요
 
-        if distance <= 0.5: # 500m 이내
+        if distance <= 0.3: # 300m 이내
             return 'nearest'
-        elif distance <= 1.500: # 1.5km 이내
+        elif distance <= 1.000: # 1km 이내
             return 'near'
         elif distance <= 5.0: # 5km 이내
             return 'medium'
