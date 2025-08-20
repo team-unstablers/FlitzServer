@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from twisted.words.im.basechat import Conversation
@@ -18,7 +18,7 @@ from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
 from user.models import User, UserIdentity, UserMatch, UserSettings
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
-    UserRegistrationSerializer, UserSettingsSerializer
+    UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from user_auth.models import UserSession
@@ -66,6 +66,26 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             return Response(serializer.errors, status=400)
 
+    @action(detail=False, methods=['POST'], url_path='self/passwd')
+    def change_password(self, request, *args, **kwargs):
+        serializer = UserPasswdSerializer(data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            validated_data = serializer.validated_data
+
+            user: User = self.request.user
+            user.set_password(validated_data['new_password'])
+
+            user.save()
+        except serializers.ValidationError as e:
+            return Response({
+                'is_success': False,
+                'reason': e.detail,
+            }, status=400)
+
+        return Response({'is_success': True}, status=200)
+
     @action(detail=False, methods=['GET', 'PATCH'], url_path='self/identity')
     def dispatch_self_identity(self, request, *args, **kwargs):
         if request.method == 'GET':
@@ -79,7 +99,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         user: User = self.request.user
 
         if not hasattr(user, 'identity'):
-            return Response({'is_success': False, 'message': 'Identity not found'}, status=404)
+            return Response({'is_success': False, 'reason': 'Identity not found'}, status=404)
 
         identity = user.identity
         serializer = SelfUserIdentitySerializer(identity)
@@ -150,7 +170,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         user: User = self.request.user
 
         if not hasattr(user, 'wave_safety_zone'):
-            return Response({'is_success': False, 'message': 'Wave safety zone settings not available'}, status=404)
+            return Response({'is_success': False, 'reason': 'Wave safety zone settings not available'}, status=404)
 
         safety_zone = user.wave_safety_zone
         serializer = UserWaveSafetyZoneSerializer(safety_zone)
@@ -272,9 +292,6 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             ).delete()
 
         return Response({'is_success': True}, status=204)
-
-
-
 
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request, *args, **kwargs):

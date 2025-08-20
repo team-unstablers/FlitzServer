@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from user.models import User, UserIdentity, UserSettings
+from user.utils import validate_password
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
@@ -147,3 +148,25 @@ class UserSettingsSerializer(serializers.ModelSerializer):
                 instance.marketing_notifications_enabled_at = None
         
         return super().update(instance, validated_data)
+
+class UserPasswdSerializer(serializers.Serializer):
+    """
+    비밀번호 변경을 위한 serializer
+    """
+
+    old_password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
+    new_password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("현재 비밀번호가 일치하지 않습니다.")
+        return value
+
+    def validate_new_password(self, value):
+        validated, reason = validate_password(value)
+
+        if not validated:
+            raise serializers.ValidationError(reason)
+
+        return value
