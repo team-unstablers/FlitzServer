@@ -15,10 +15,6 @@ from django.utils import timezone
 
 from flitz.apns import APNS
 from flitz.gpgenc import gpg_encrypt
-from card.models import CardFavoriteItem, CardDistribution, Card, UserCardAsset, CardFlag
-from location.models import UserLocation, DiscoverySession, DiscoveryHistory
-from messaging.models import DirectMessageFlag, DirectMessageAttachment, DirectMessage, DirectMessageConversation, \
-    DirectMessageParticipant
 from user.models import User, PushNotificationType, UserIdentity, UserGenderBit, UserDeletionPhase, \
     UserDeletionReviewRequestReason, UserDeletionReviewRequest, DeletedUserArchive
 from user.objdef import DeletedUserArchiveData
@@ -99,17 +95,21 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
       - 휴대폰 번호, 이메일 등의 기본 정보는 범죄 방지를 위하여 일정 기간동안 아카이브로써 보관합니다.
     """
 
+    from card.models import CardFlag
+    from location.models import UserLocation, DiscoverySession, DiscoveryHistory
+    from messaging.models import DirectMessageFlag
+
     user = User.objects.get(id=user_id)
 
     # PREREQUISITES: 사용자가 문제 행동을 일으킨 적이 있는지 확인
     content_flags_count = CardFlag.objects.filter(
         card__user=user,
-        resolved_at__isnull=False,
+        resolved_at__isnull=True,
     ).only('id').count()
 
     message_flags_count = DirectMessageFlag.objects.filter(
         message__sender=user,
-        resolved_at__isnull=False,
+        resolved_at__isnull=True,
     ).only('id').count()
 
     # TODO: 사용자의 프로필 플래그 확인
@@ -242,6 +242,8 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
 
 @transaction.atomic
 def execute_deletion_phase_content(user_id: UUID):
+    from card.models import CardFavoriteItem, CardDistribution, Card, UserCardAsset, CardFlag
+
     user = User.objects.get(id=user_id)
 
     # 1-1. CardFavoriteItem 삭제
@@ -300,6 +302,9 @@ def execute_deletion_phase_content(user_id: UUID):
 
 @transaction.atomic
 def execute_deletion_phase_message(user_id: UUID):
+    from messaging.models import DirectMessageFlag, DirectMessageAttachment, DirectMessage, DirectMessageConversation, \
+        DirectMessageParticipant
+
     user = User.objects.get(id=user_id)
 
     # 2-1. DirectMessageAttachment 삭제
