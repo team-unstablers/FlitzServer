@@ -102,7 +102,8 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             )
 
             session = DiscoverySession.objects.select_related(
-                'user', 'user__location', 'user__main_card', 'user__identity'
+                'user', 'user__location', 'user__main_card', 'user__identity',
+                'user__wave_safety_zone'
             ).filter(
                 id=validated_data['session_id'],
                 user=request.user,
@@ -110,7 +111,8 @@ class FlitzWaveViewSet(viewsets.ViewSet):
             ).first()
 
             discovered_session = DiscoverySession.objects.select_related(
-                'user', 'user__location', 'user__main_card', 'user__identity'
+                'user', 'user__location', 'user__main_card', 'user__identity',
+                'user__wave_safety_zone'
             ).filter(
                 id=validated_data['discovered_session_id'],
                 is_active=True

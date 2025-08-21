@@ -56,6 +56,35 @@ class UserMatcher:
         """
         return True
 
+    def __is_in_safety_zone(self) -> bool:
+        # SAFETY: 사용자 어느 한 쪽이 자신이나 서로의 safety zone 안에 있는 경우, Wave를 시도하지 않습니다.
+
+        user_a = self.discoverer.user
+        user_b = self.discovered.user
+
+        safety_zone_a = user_a.wave_safety_zone if hasattr(user_a, 'wave_safety_zone') else None
+        safety_zone_b = user_b.wave_safety_zone if hasattr(user_b, 'wave_safety_zone') else None
+
+        result = False
+
+        if safety_zone_a is not None:
+            result = result or safety_zone_a.evaluate(
+                latitude=user_a.location.latitude,
+                longitude=user_a.location.longitude
+            ) or safety_zone_a.evaluate(
+                latitude=user_b.location.latitude,
+                longitude=user_b.location.longitude
+            )
+        if safety_zone_b is not None:
+            result = result or safety_zone_b.evaluate(
+                latitude=user_a.location.latitude,
+                longitude=user_a.location.longitude
+            ) or safety_zone_b.evaluate(
+                latitude=user_b.location.latitude,
+                longitude=user_b.location.longitude
+            )
+
+        return result
 
     def __distribute_card(self, from_user: User, to_user: User, history: DiscoveryHistory):
         """
@@ -100,6 +129,9 @@ class UserMatcher:
             return False
 
         if not self.__is_nearby():
+            return False
+
+        if self.__is_in_safety_zone():
             return False
 
         return True

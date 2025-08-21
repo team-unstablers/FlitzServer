@@ -5,6 +5,7 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 from flitz.models import BaseModel
+from location.utils.distance import measure_distance
 from safety.utils.phone_number import hash_phone_number, normalize_phone_number
 
 from user.models import User
@@ -19,10 +20,29 @@ class UserWaveSafetyZone(BaseModel):
     longitude = models.FloatField(null=True, blank=False)
 
     # TODO: validate: accept only (300m, 500m, 1000m)
+    # radius (in meters)
     radius = models.FloatField(null=False, blank=False)
 
     is_enabled = models.BooleanField(default=False, null=False, blank=False)
     enable_wave_after_exit = models.BooleanField(default=True, null=False, blank=False)
+
+    def evaluate(self, latitude: float, longitude: float) -> bool:
+        """
+        주어진 위도와 경도가 설정된 안전 구역 내에 있는지 평가합니다.
+        """
+
+        if not self.is_enabled:
+            return False
+
+        distance = measure_distance(
+            (self.latitude, self.longitude),
+            (latitude, longitude),
+        )
+
+        radius_in_kilo = self.radius / 1000.0  # Convert radius from meters to kilometers
+
+        return distance <= radius_in_kilo
+
 
 class UserBlock(BaseModel):
     """
