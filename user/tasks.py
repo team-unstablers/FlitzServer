@@ -1,16 +1,21 @@
+import json
 from logging import Logger
 from typing import Optional
 
 from uuid import UUID
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from django.conf import settings
 from django.core.cache import cache
+from django.core.files import File
+from django.core.files.temp import NamedTemporaryFile
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from card.models import CardFavoriteItem, CardDistribution, Card, UserCardAsset, CardFlag
 from flitz.apns import APNS
+from flitz.gpgenc import gpg_encrypt
+from card.models import CardFavoriteItem, CardDistribution, Card, UserCardAsset, CardFlag
 from location.models import UserLocation, DiscoverySession, DiscoveryHistory
 from messaging.models import DirectMessageFlag, DirectMessageAttachment, DirectMessage, DirectMessageConversation, \
     DirectMessageParticipant
@@ -148,13 +153,30 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
         phone_number=user.phone_number,
     )
 
-    DeletedUserArchive.objects.update_or_create(
-        original_user_id=user.id,
-        defaults={
-            'archived_data': archive_data,
-            'delete_scheduled_at': timezone.now() + timezone.timedelta(days=30),  # 30일 후에 삭제 예정
-        }
-    )
+    try:
+        encrypted_archive_data = gpg_encrypt(
+            json.dumps(archive_data).encode('utf-8'),
+            pubkey_file=settings.GPG_PUBLIC_KEY_FILE  # 공개키 파일 경로
+        )
+
+        archive, _ = DeletedUserArchive.objects.update_or_create(
+            original_user_id=user.id,
+            defaults={
+                'delete_scheduled_at': timezone.now() + timezone.timedelta(days=30),  # 30일 후에 삭제 예정
+            }
+        )
+
+        with NamedTemporaryFile() as temp_file:
+            temp_file.write(encrypted_archive_data)
+            temp_file.flush()
+
+            # 아카이브 데이터를 저장합니다
+            archive.archived_data.save(f"{user.id}.enc", File(temp_file), save=False)
+            archive.save()
+    except Exception as e:
+        logger.error(f"execute_deletion_phase_sensitive_data(): error encrypting and saving archive data for user {user_id}: {e}", exc_info=True)
+        # 아카이브 실패 시, 일단 사용자 삭제를 중단합니다
+        raise
 
     # 0. 모든 세션 무효화
     UserSession.objects.filter(

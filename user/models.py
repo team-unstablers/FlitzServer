@@ -26,6 +26,18 @@ def profile_image_upload_to(instance, filename):
     shard = file_uuid[:2]
     return f"profile_images/{shard}/{file_uuid}.jpg"
 
+def deleted_user_archive_upload_to(instance, filename):
+    """
+    사용자 삭제 아카이브의 저장 경로를 생성합니다.
+    파일명은 UUID7을 사용하고, 항상 .enc로 저장됩니다.
+    디렉토리 샤딩을 적용하여 성능을 최적화합니다.
+    """
+    file_uuid = str(uuid7())
+    # UUID의 첫 2글자로 디렉토리 샤딩 (256개 디렉토리로 분산)
+    shard = file_uuid[:2]
+    return f"user_delarch/{shard}/{file_uuid}.enc"
+
+
 class UserGenderBit(models.IntegerChoices):
     UNSET = 0
     MAN = 1
@@ -444,7 +456,7 @@ class DeletedUserArchive(BaseModel):
     """
 
     original_user_id = UUIDv7Field(null=True)
-    archived_data = models.JSONField(null=True)
+    archived_data = models.FileField(upload_to=deleted_user_archive_upload_to, null=True, blank=True)
 
     delete_scheduled_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
