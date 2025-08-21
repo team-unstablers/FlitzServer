@@ -21,7 +21,6 @@ from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, Sel
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
 
 from flitz.exceptions import UnsupportedOperationException
-from user.tasks import deactivate_user
 from user_auth.models import UserSession
 
 # Create your views here.
