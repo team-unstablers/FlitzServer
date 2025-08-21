@@ -3,21 +3,13 @@ from typing import List, Optional, TypedDict, Literal, Dict
 from enum import Enum
 from dataclasses import dataclass, asdict
 
-@dataclass
-class UserProfile:
-    hashtags: List[str]
-    description: str
+class DeletedUserArchiveData(TypedDict):
+    """
+    삭제된 사용자 아카이브 정보
+    """
+    id: str
 
-
-
-    @staticmethod
-    def create_empty() -> "UserProfile":
-        return UserProfile(
-            hashtags=[]
-        )
-
-    def as_dict(self) -> dict:
-        return asdict(self)
-
-    def sanity_check(self):
-        return True
+    username: Optional[str]
+    display_name: Optional[str]
+    email: Optional[str]
+    phone_number: Optional[str]

@@ -34,6 +34,11 @@ app.conf.beat_schedule = {
         'task': 'user.tasks.wake_up_apps',
         'schedule': crontab(minute='*/20'),  # 매 20분마다 실행
     },
+
+    'poll-user-deletion-phase': {
+        'task': 'user.tasks.poll_user_deletion_phase',
+        'schedule': crontab(hour='*', minute=0),  # 1시간마다 실행
+    }
 }
 
 

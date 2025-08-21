@@ -181,3 +181,6 @@ flitz-devenv/redis-data
 flitz-devenv/db-data
 
 *.p8
+
+/flitz*.private.asc
+/flitz*.public.asc
