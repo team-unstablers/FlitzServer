@@ -68,7 +68,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='self/passwd')
     def change_password(self, request, *args, **kwargs):
-        serializer = UserPasswdSerializer(data=request.data)
+        serializer = UserPasswdSerializer(data=request.data, context={'request': request})
 
         try:
             serializer.is_valid(raise_exception=True)
