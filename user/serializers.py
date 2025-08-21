@@ -170,3 +170,16 @@ class UserPasswdSerializer(serializers.Serializer):
             raise serializers.ValidationError(reason)
 
         return value
+
+class UserDeactivationSerializer(serializers.Serializer):
+    """
+    사용자 탈퇴를 위한 serializer
+    """
+
+    password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
+
+    def validate_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("비밀번호가 일치하지 않습니다.")
+        return value

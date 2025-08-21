@@ -18,9 +18,10 @@ from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
 from user.models import User, UserIdentity, UserMatch, UserSettings
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
-    UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer
+    UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
 
 from flitz.exceptions import UnsupportedOperationException
+from user.tasks import deactivate_user
 from user_auth.models import UserSession
 
 # Create your views here.
@@ -292,6 +293,28 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             ).delete()
 
         return Response({'is_success': True}, status=204)
+
+    @action(detail=False, methods=['POST'], url_path='self/deactivate')
+    def deactivate_self(self, request, *args, **kwargs):
+        user = self.request.user
+
+        serializer = UserDeactivationSerializer(data=request.data, context={'request': request})
+        try:
+            serializer.is_valid(raise_exception=True)
+
+            with transaction.atomic():
+                user.disabled_at = timezone.now()
+                user.save()
+
+            deactivate_user.delay_on_commit(user.id)
+
+        except serializers.ValidationError as e:
+            return Response({
+                'is_success': False,
+                'reason': e.detail,
+            }, status=299)
+
+        return Response({'is_success': True}, status=200)
 
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request, *args, **kwargs):

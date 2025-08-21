@@ -36,6 +36,21 @@ class UserGenderBit(models.IntegerChoices):
     def ALL():
         return UserGenderBit.MAN | UserGenderBit.WOMAN | UserGenderBit.NON_BINARY
 
+class UserDeletionPhase(models.IntegerChoices):
+    INITIATED = 0, '삭제 시작됨'
+    SENSITIVE_DATA_DELETED = 1, '민감 정보 삭제됨'
+    CONTENT_DELETED = 2, '컨텐츠 삭제됨'
+    MESSAGE_DELETED = 3, '메시지 삭제됨'
+    FULLY_DELETED = 4, '전체 삭제됨'
+
+
+class UserDeletionReviewRequestReason(models.IntegerChoices):
+    HAS_FLAGGED_CONTENT = 1
+    HAS_FLAGGED_MESSAGE = 2
+    HAS_FLAGGED_PROFILE = 4
+    OTHER = 8
+
+
 # 푸시 알림 유형
 PushNotificationType = Literal['message', 'match', 'notice', 'marketing']
 
@@ -52,7 +67,7 @@ class User(AbstractUser):
 
     id = UUIDv7Field(primary_key=True, editable=False)
 
-    username = models.CharField(max_length=24, unique=True)
+    username = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=24)
 
     country = models.CharField(max_length=2, null=True, blank=True)
@@ -75,6 +90,11 @@ class User(AbstractUser):
     paid_coins = models.IntegerField(default=0)
 
     contacts_blocker_enabled = models.BooleanField(default=False, null=False, blank=False)
+
+    # 현재 삭제 페이즈
+    deletion_phase = models.IntegerField(choices=UserDeletionPhase.choices, null=True, blank=True)
+    # 다음 페이즈로 이동하기 위한 예약 시간
+    deletion_phase_scheduled_at = models.DateTimeField(null=True, blank=True)
 
     fully_deleted_at = models.DateTimeField(null=True, blank=True)
 
@@ -391,11 +411,40 @@ class UserMatch(BaseModel):
 
         cls.objects.filter(user_a=user_a, user_b=user_b).delete()
 
-
 class Notification(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     type = models.CharField(max_length=64, null=False, blank=False)
     content = models.JSONField(null=False, default=dict)
 
     read_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+class UserDeletionReviewRequest(BaseModel):
+    """
+    사용자가 플래그된 경우, 추가적인 리뷰 후 삭제를 진행하기 위한 모델입니다.
+    """
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='deletion_review_request')
+
+    reason = models.IntegerField(null=False, blank=False, default=0)
+    reason_text = models.CharField(max_length=256, null=False, blank=False)
+
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+class DeletedUserArchive(BaseModel):
+    """
+    삭제된 사용자의 기본 정보를 일정 기간동안 보관합니다.
+    """
+
+    original_user_id = UUIDv7Field(null=True)
+    archived_data = models.JSONField(null=True)
+
+    delete_scheduled_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
