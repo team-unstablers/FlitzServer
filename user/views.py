@@ -16,7 +16,7 @@ from flitz.thumbgen import generate_thumbnail
 from messaging.models import DirectMessageConversation
 from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
-from user.models import User, UserIdentity, UserMatch, UserSettings
+from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
 
@@ -296,7 +296,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['POST'], url_path='self/deactivate')
     def deactivate_self(self, request, *args, **kwargs):
-        user = self.request.user
+        user: User = self.request.user
 
         serializer = UserDeactivationSerializer(data=request.data, context={'request': request})
         try:
@@ -304,9 +304,9 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
             with transaction.atomic():
                 user.disabled_at = timezone.now()
+                user.deletion_phase = UserDeletionPhase.INITIATED
+                user.deletion_phase_scheduled_at = timezone.now()
                 user.save()
-
-            deactivate_user.delay_on_commit(user.id)
 
         except serializers.ValidationError as e:
             return Response({
