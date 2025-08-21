@@ -105,7 +105,7 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
     message_flags_count = DirectMessageFlag.objects.filter(
         message__sender=user,
         resolved_at__isnull=False,
-    ).only('id').exists()
+    ).only('id').count()
 
     # TODO: 사용자의 프로필 플래그 확인
     profile_flags_count = 0
