@@ -171,7 +171,7 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
         display_trans_to_others=False,
         preferred_genders=0,
         welcomes_trans=False,
-        trans_preferes_safe_match=False
+        trans_prefers_safe_match=False
     )
 
     # 2. 민감 정보 삭제: 위치 정보 기록
