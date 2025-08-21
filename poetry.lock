@@ -1745,6 +1745,18 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "python-gnupg"
+version = "0.5.5"
+description = "A wrapper for the Gnu Privacy Guard (GPG or GnuPG)"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "python-gnupg-0.5.5.tar.gz", hash = "sha256:3fdcaf76f60a1b948ff8e37dc398d03cf9ce7427065d583082b92da7a4ff5a63"},
+    {file = "python_gnupg-0.5.5-py2.py3-none-any.whl", hash = "sha256:51fa7b8831ff0914bc73d74c59b99c613de7247b91294323c39733bb85ac3fc1"},
+]
+
+[[package]]
 name = "pytz"
 version = "2024.2"
 description = "World timezone definitions, modern and historical"
@@ -2263,4 +2275,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "f00c4c61beb6fd70934cf7d3c250e019ad32d8c212c8f0438ad134ba6081c285"
+content-hash = "960cad2a51e967458f8621629daf617b4cb583e2d5125fc3423229bea4edc9e8"
