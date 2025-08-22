@@ -460,3 +460,10 @@ class DeletedUserArchive(BaseModel):
 
     delete_scheduled_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
+
+class UserDeletionFeedback(BaseModel):
+    """
+    사용자가 삭제 후 남긴 피드백을 저장합니다.
+    """
+
+    feedback_text = models.TextField(null=False, blank=False)

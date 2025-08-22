@@ -16,7 +16,7 @@ from flitz.thumbgen import generate_thumbnail
 from messaging.models import DirectMessageConversation
 from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
-from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase
+from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase, UserDeletionFeedback
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
 
@@ -300,6 +300,16 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = UserDeactivationSerializer(data=request.data, context={'request': request})
         try:
             serializer.is_valid(raise_exception=True)
+
+            try:
+                feedback_text = serializer.validated_data.get('feedback', '').strip()
+
+                if feedback_text:
+                    UserDeletionFeedback.objects.create(
+                        feedback_text=serializer.data['feedback'],
+                    )
+            except Exception as e:
+                print(f"Failed to save deletion feedback: {e}")
 
             with transaction.atomic():
                 user.disabled_at = timezone.now()

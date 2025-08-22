@@ -177,6 +177,7 @@ class UserDeactivationSerializer(serializers.Serializer):
     """
 
     password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
+    feedback = serializers.CharField(max_length=600, allow_blank=True, required=False)
 
     def validate_password(self, value):
         user = self.context['request'].user
