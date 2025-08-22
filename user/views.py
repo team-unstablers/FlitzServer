@@ -320,7 +320,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         except serializers.ValidationError as e:
             return Response({
                 'is_success': False,
-                'reason': e.detail,
+                'reason': str(e.detail.get('password', ['Invalid password'])[0]),
             }, status=299)
 
         return Response({'is_success': True}, status=200)
