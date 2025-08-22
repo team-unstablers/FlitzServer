@@ -23,7 +23,10 @@ def request_token(request: HttpRequest):
         validated_data = serializer.validated_data
 
         try:
-            user = User.objects.get(username=validated_data['username'])
+            user = User.objects.get(
+                username=validated_data['username'],
+                disabled_at__isnull=True,
+            )
         except User.DoesNotExist:
             return HttpResponse(status=401)
 
