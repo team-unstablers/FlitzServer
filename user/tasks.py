@@ -229,7 +229,7 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
     user.hashtags = []
 
     user.birth_date = None
-    user.email = None
+    user.email = ''
 
     user.deletion_phase = UserDeletionPhase.SENSITIVE_DATA_DELETED
 
