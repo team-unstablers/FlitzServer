@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage, Storage
 from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.postgres.indexes import GinIndex
 
 from uuid_v7.base import uuid7
 
@@ -186,10 +187,23 @@ class UserCardAsset(BaseModel):
         self.save()
 
 class CardFlag(BaseModel):
+    class Meta:
+        indexes = [
+            models.Index(fields=['card']),
+            models.Index(fields=['user']),
+
+            GinIndex(fields=['reason']),
+
+            models.Index(fields=['resolved_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='flags')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flagged_cards')
 
-    reason = models.CharField(max_length=128, null=False, blank=False)
+    reason = models.JSONField(default=list)
     user_description = models.TextField(null=True, blank=True)
 
     resolved_at = models.DateTimeField(null=True, blank=True)
@@ -406,3 +420,4 @@ class CardFavoriteItem(BaseModel):
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='collection_items')
 
     deleted_at = models.DateTimeField(null=True, blank=True)
+

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from user.models import User, UserIdentity, UserSettings
+from user.models import User, UserIdentity, UserSettings, UserFlag
 from user.utils import validate_password
 
 
@@ -184,3 +184,38 @@ class UserDeactivationSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("비밀번호가 일치하지 않습니다.")
         return value
+
+
+class UserFlagSerializer(serializers.ModelSerializer):
+    """
+    사용자 신고를 위한 serializer
+    """
+    
+    reason = serializers.JSONField(required=True)
+    user_description = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_reason(self, value):
+        """
+        reason이 문자열 배열인지 검증
+        """
+        if not isinstance(value, list):
+            raise serializers.ValidationError("reason must be an array")
+        
+        for item in value:
+            if not isinstance(item, str):
+                raise serializers.ValidationError("reason must be an array of strings")
+        
+        if len(value) == 0:
+            raise serializers.ValidationError("reason array cannot be empty")
+        
+        return value
+    
+    def create(self, validated_data):
+        # context에서 flagged_by와 user 자동 설정
+        validated_data['flagged_by'] = self.context['request'].user
+        validated_data['user'] = self.context['user']
+        return super().create(validated_data)
+
+    class Meta:
+        model = UserFlag
+        fields = ('reason', 'user_description')

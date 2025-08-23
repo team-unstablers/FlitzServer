@@ -7,19 +7,21 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 
-from rest_framework import permissions, viewsets, parsers, filters
+from rest_framework import permissions, viewsets, parsers, filters, status
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 from card.objdef import CardObject, CardSchemaVersion, AssetReference
 from card.serializers import PublicCardSerializer, PublicSelfUserCardAssetSerializer, \
-    CardDistributionSerializer, PublicWriteOnlyCardSerializer, CardFavoriteItemSerializer
-from card.models import Card, UserCardAsset, CardDistribution, CardVote, CardFavoriteItem
+    CardDistributionSerializer, PublicWriteOnlyCardSerializer, CardFavoriteItemSerializer, CardFlagSerializer
+from card.models import Card, UserCardAsset, CardDistribution, CardVote, CardFavoriteItem, CardFlag
 from flitz.pagination import CursorPagination
 from user.models import User, UserLike
 
 from flitz.exceptions import UnsupportedOperationException
+from flitz.tasks import post_slack_message
 
 # Create your views here.
 
@@ -180,6 +182,42 @@ class PublicCardViewSet(viewsets.ModelViewSet):
 
         return Response({'is_success': True}, status=200)
 
+    @action(detail=True, methods=['POST'], url_path='flag')
+    def flag_card(self, request: Request, pk, *args, **kwargs):
+        """
+        카드를 신고하는 API 엔드포인트
+        """
+        card = self.get_object()
+
+        serializer = CardFlagSerializer(
+            data=request.data,
+            context={
+                'request': request,
+                'card': card
+            }
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            flag: CardFlag = serializer.save()
+
+            post_slack_message.delay(
+                "*새로운 카드 신고*\n"
+                f"> *신고자*: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
+                f'> *신고 대상 카드*: `{str(card.id)}` - {card.title}\n'
+                f'> *카드 소유자*: {card.user.display_name} ({card.user.username}; `{card.user.id}`)\n'
+                f'> *신고 유형*: `{str(flag.reason)}`\n'
+                f'> *추가 정보*: {str(flag.user_description)}'
+            )
+
+            return Response({
+                'is_success': True,
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'is_success': False,
+                'reason': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['GET', 'POST'], url_path='asset-references')
     def asset_references(self, request: Request, pk, *args, **kwargs):

@@ -6,9 +6,10 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 
-from rest_framework import permissions, viewsets, serializers
+from rest_framework import permissions, viewsets, serializers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from twisted.words.im.basechat import Conversation
 
 from card.models import CardDistribution, CardFavoriteItem
@@ -16,11 +17,12 @@ from flitz.thumbgen import generate_thumbnail
 from messaging.models import DirectMessageConversation
 from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
-from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase, UserDeletionFeedback
+from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase, UserDeletionFeedback, UserFlag
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
-    UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
+    UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer, UserFlagSerializer
 
 from flitz.exceptions import UnsupportedOperationException
+from flitz.tasks import post_slack_message
 from user.tasks import execute_deletion_phase
 from user_auth.models import UserSession
 
@@ -293,6 +295,48 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             ).delete()
 
         return Response({'is_success': True}, status=204)
+
+    @action(detail=True, methods=['POST'], url_path='flag')
+    def flag_user(self, request, *args, **kwargs):
+        """
+        사용자를 신고하는 API 엔드포인트
+        """
+        target_user = self.get_object()
+        
+        if request.user.id == target_user.id:
+            return Response({
+                'is_success': False,
+                'reason': 'Cannot flag yourself'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = UserFlagSerializer(
+            data=request.data,
+            context={
+                'request': request,
+                'user': target_user
+            }
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            flag: UserFlag = serializer.save()
+
+            post_slack_message.delay(
+                "*새로운 사용자 신고*\n"
+                f"> *신고자*: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
+                f"> *신고 대상*: {target_user.display_name} ({target_user.username}; `{target_user.id}`)\n"
+                f"> *신고 유형*: `{str(flag.reason)}`\n"
+                f"> *추가 정보*: {str(flag.user_description)}"
+            )
+
+            return Response({
+                'is_success': True,
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'is_success': False,
+                'reason': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['POST'], url_path='self/deactivate')
     def deactivate_self(self, request, *args, **kwargs):

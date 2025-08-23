@@ -7,6 +7,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.core.cache import cache
 from django.db import models, transaction
 from django.utils import timezone
+from django.contrib.postgres.indexes import GinIndex
 from uuid_v7.base import uuid7
 
 from flitz.models import UUIDv7Field, BaseModel
@@ -467,3 +468,29 @@ class UserDeletionFeedback(BaseModel):
     """
 
     feedback_text = models.TextField(null=False, blank=False)
+
+
+class UserFlag(BaseModel):
+    """
+    사용자 프로필 신고 기록을 저장합니다.
+    """
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['flagged_by']),
+
+            GinIndex(fields=['reason']),
+
+            models.Index(fields=['resolved_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flags')
+    flagged_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='flagged_users')
+
+    reason = models.JSONField(default=list)
+    user_description = models.TextField(null=True, blank=True)
+
+    resolved_at = models.DateTimeField(null=True, blank=True)
