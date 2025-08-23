@@ -134,54 +134,47 @@ class DirectMessageConversationSerializer(serializers.ModelSerializer):
 
 
 class DirectMessageFlagSerializer(serializers.ModelSerializer):
-    """
-    | write: target_message(id), reason, user_description
-    | read: conversation(dict), user(dict), message(dict), reason, user_description, resolved_at
-    |
-    | 시리얼라이저를 통해서는 create 만 지원. update 는 UnsupportedOperationException 을 발생시킵니다.
-    """
 
-    conversation = DirectMessageConversationSerializer(
-        read_only=True
-    )
-
-    user = PublicUserSerializer(
-        read_only=True
-    )
-
-    message = DirectMessageReadOnlySerializer(
-        read_only=True
-    )
-    target_message = serializers.PrimaryKeyRelatedField(
+    message = serializers.PrimaryKeyRelatedField(
         queryset=DirectMessage.objects.all(),
-        write_only=True
+        required=False
     )
 
-    def set_fields_using_target_message(self, validated_data):
-        target_message: DirectMessage = validated_data.pop('target_message')
-        validated_data['message'] = target_message
-        validated_data['conversation'] = target_message.conversation_id
-        validated_data['user'] = target_message.sender_id
-        return validated_data
+    reason = serializers.JSONField(required=True)
+    user_description = serializers.CharField(required=True)
 
+    def validate_reason(self, value):
+        """
+        reason이 문자열 배열인지 검증
+        """
+        if not isinstance(value, list):
+            raise serializers.ValidationError("reason must be an array")
+        
+        for item in value:
+            if not isinstance(item, str):
+                raise serializers.ValidationError("reason must be an array of strings")
+        
+        if len(value) == 0:
+            raise serializers.ValidationError("reason array cannot be empty")
+        
+        return value
+    
+    def validate_message(self, value: DirectMessage):
+        """
+        message가 해당 conversation에 속하는지 검증
+        """
+        if value and 'conversation' in self.context:
+            conversation = self.context['conversation']
+            if value.conversation_id != conversation.id:
+                raise serializers.ValidationError("Message does not belong to this conversation")
+        return value
+    
     def create(self, validated_data):
-        return super().create(self.set_fields_using_target_message(validated_data))
-
-    def update(self, instance, validated_data):
-        return UnsupportedOperationException()
+        # context에서 user와 conversation 자동 설정
+        validated_data['user'] = self.context['request'].user
+        validated_data['conversation'] = self.context['conversation']
+        return super().create(validated_data)
 
     class Meta:
         model = DirectMessageFlag
-        read_only_fields = (
-            'id',
-            'message',
-            'conversation',
-            'user',
-            'reason',
-            'user_description',
-            'resolved_at',
-        )
-        fields = (
-            *read_only_fields,
-            'target_message',
-        )
+        fields = ('message', 'reason', 'user_description')

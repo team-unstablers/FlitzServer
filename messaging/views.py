@@ -13,12 +13,15 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 from flitz.exceptions import UnsupportedOperationException
+from flitz.thumbgen import generate_thumbnail
+from flitz.tasks import post_slack_message
 
-from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, DirectMessageParticipant
+from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageAttachment, \
+    DirectMessageParticipant, DirectMessageFlag
 from messaging.objdef import DirectMessageAttachmentContent
 from messaging.serializers import DirectMessageConversationSerializer, DirectMessageSerializer, \
-    DirectMessageReadOnlySerializer, DirectMessageAttachmentSerializer
-from flitz.thumbgen import generate_thumbnail
+    DirectMessageReadOnlySerializer, DirectMessageAttachmentSerializer, DirectMessageFlagSerializer
+
 
 
 class DirectMessageConversationViewSet(viewsets.ModelViewSet):
@@ -60,6 +63,42 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
         instance.deleted_at = timezone.now()
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['POST'], url_path='/flag')
+    def flag_conversation(self, request: Request, *args, **kwargs):
+        """
+        대화를 신고하는 API 엔드포인트
+        """
+        conversation = self.get_object()
+
+        serializer = DirectMessageFlagSerializer(
+            data=request.data,
+            context={
+                'request': request,
+                'conversation': conversation
+            }
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            flag: DirectMessageFlag = serializer.save()
+
+            post_slack_message.delay(
+                "*새로운 DM 신고*\n"
+                f"> 신고자: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
+                f'> 신고 대상 대화 ID: {str(conversation.id)}\n'
+                f'> 신고 유형: {str(flag.reason)}\n'
+                f'> 추가 정보: {str(flag.user_description)}'
+            )
+
+            return Response({
+                'is_success': True,
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'is_success': False,
+                'reason': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DirectMessageViewSet(viewsets.ModelViewSet):

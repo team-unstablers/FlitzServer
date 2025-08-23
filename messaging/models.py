@@ -224,17 +224,24 @@ class DirectMessageAttachment(BaseModel):
         self.save()
 
 class DirectMessageFlag(BaseModel):
-    class FlagReason(models.TextChoices):
-        INAPPROPRIATE = 'INAPPROPRIATE', 'Inappropriate'
-        SPAM = 'SPAM', 'Spam'
-        HARASSMENT = 'HARASSMENT', 'Harassment'
-        OTHER = 'OTHER', 'Other'
+    class Meta:
+        indexes = [
+            models.Index(fields=['conversation']),
+            models.Index(fields=['user']),
+
+            GinIndex(fields=['reason']),
+
+            models.Index(fields=['resolved_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
 
     conversation = models.ForeignKey(DirectMessageConversation, on_delete=models.CASCADE)
-    message = models.ForeignKey(DirectMessage, on_delete=models.CASCADE)
+    message = models.ForeignKey(DirectMessage, on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    reason = models.CharField(max_length=32, choices=FlagReason.choices, null=False, blank=False)
+    reason = models.JSONField(default=list)
     user_description = models.TextField(null=True, blank=True)
 
     resolved_at = models.DateTimeField(null=True, blank=True)
