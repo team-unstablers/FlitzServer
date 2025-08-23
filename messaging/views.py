@@ -64,7 +64,7 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['POST'], url_path='/flag')
+    @action(detail=True, methods=['POST'], url_path='flag')
     def flag_conversation(self, request: Request, *args, **kwargs):
         """
         대화를 신고하는 API 엔드포인트
