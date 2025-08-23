@@ -86,11 +86,11 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
             display_content = '(미지정)'
             if flag.message:
                 message_content = flag.message.content
-                display_content = '(알 수 없음)'
+                display_content = f'[`{flag.message.id}`] (알 수 없음)'
                 if message_content.get('type') == 'text':
-                    display_content = message_content.get('text', '(없음)')
+                    display_content = f'[{flag.message.id}] ' + message_content.get('text', '(없음)')
                 elif message_content.get('type') == 'attachment':
-                    display_content = '(첨부 파일)'
+                    display_content = f'[{flag.message.id}] (첨부 파일)'
 
             post_slack_message.delay(
                 "*새로운 DM 신고*\n"
