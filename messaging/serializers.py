@@ -141,7 +141,7 @@ class DirectMessageFlagSerializer(serializers.ModelSerializer):
     )
 
     reason = serializers.JSONField(required=True)
-    user_description = serializers.CharField(required=False)
+    user_description = serializers.CharField(required=False, allow_blank=True)
 
     def validate_reason(self, value):
         """
