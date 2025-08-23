@@ -83,15 +83,19 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             flag: DirectMessageFlag = serializer.save()
 
+            display_content = '(미지정)'
             if flag.message:
                 message_content = flag.message.content
-            else:
-                message_content = None
+                display_content = '(알 수 없음)'
+                if message_content.get('type') == 'text':
+                    display_content = message_content.get('text', '(없음)')
+                elif message_content.get('type') == 'attachment':
+                    display_content = '(첨부 파일)'
 
             post_slack_message.delay(
                 "*새로운 DM 신고*\n"
                 f"> *신고자*: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
-                f'> *신고 대상 메시지*: {message_content}\n'
+                f'> *신고 대상 메시지*: {display_content}\n'
                 f'> *신고 대상 대화 ID*: {str(conversation.id)}\n'
                 f'> *신고 유형*: {str(flag.reason)}\n'
                 f'> *추가 정보*: {str(flag.user_description)}'
