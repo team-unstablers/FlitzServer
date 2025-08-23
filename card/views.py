@@ -34,7 +34,7 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
         queryset = CardDistribution.objects.filter(
             ~Q(reveal_phase=CardDistribution.RevealPhase.HIDDEN),
             user=self.request.user,
-            user__disabled_at__isnull=True,
+            card__user__disabled_at__isnull=True,
             dismissed_at=None,
             deleted_at=None,
         ).select_related(
