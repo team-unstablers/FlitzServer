@@ -133,7 +133,7 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
             reason |= UserDeletionReviewRequestReason.HAS_FLAGGED_PROFILE
 
         # 추후 페이즈는 리뷰 후 삭제가 진행될 수 있도록 합니다
-        UserDeletionReviewRequest.objects.update_or_create(
+        review_request, created = UserDeletionReviewRequest.objects.update_or_create(
             user=user,
             defaults={
                 'reason': reason,
@@ -142,6 +142,37 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
                 'reviewed_at': None,  # 미검토
             }
         )
+        
+        # Slack 알림 전송
+        if created:
+            from flitz.utils.slack import post_slack_message
+            
+            # 신고 사유 텍스트 생성
+            reasons = []
+            if reason & UserDeletionReviewRequestReason.HAS_FLAGGED_CONTENT:
+                reasons.append("컨텐츠 신고 이력 있음")
+            if reason & UserDeletionReviewRequestReason.HAS_FLAGGED_MESSAGE:
+                reasons.append("메시지 신고 이력 있음")
+            if reason & UserDeletionReviewRequestReason.HAS_FLAGGED_PROFILE:
+                reasons.append("프로필 신고 이력 있음")
+            if reason & UserDeletionReviewRequestReason.OTHER:
+                reasons.append("기타")
+            
+            reason_display = ", ".join(reasons) if reasons else "알 수 없음"
+            
+            slack_message = f"""🚨 *계정 삭제 리뷰 요청*
+
+*사용자 ID:* `{user.id}`
+*사용자명:* {user.username}
+*표시 이름:* {user.display_name}
+*신고 사유:* {reason_display}
+*상세 내용:* {reason_text}
+*요청 시간:* {timezone.now().strftime('%Y-%m-%d %H:%M:%S')} (UTC)
+
+⚠️ 이 사용자는 신고 이력이 있어 계정 삭제 전 검토가 필요합니다."""
+            
+            # Slack 알림을 별도 태스크로 전송
+            post_slack_message.delay(slack_message)
 
     # 범죄 방지를 위해 기본적인 정보를 30일동안 아카이브로써 보관합니다.
     archive_data = DeletedUserArchiveData(

@@ -21,6 +21,7 @@ from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, Sel
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer
 
 from flitz.exceptions import UnsupportedOperationException
+from user.tasks import execute_deletion_phase
 from user_auth.models import UserSession
 
 # Create your views here.
@@ -316,6 +317,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
                 user.deletion_phase = UserDeletionPhase.INITIATED
                 user.deletion_phase_scheduled_at = timezone.now()
                 user.save()
+
+            execute_deletion_phase.delay(user.id)
 
         except serializers.ValidationError as e:
             return Response({
