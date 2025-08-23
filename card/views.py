@@ -34,6 +34,7 @@ class CardDistributionViewSet(viewsets.ModelViewSet):
         queryset = CardDistribution.objects.filter(
             ~Q(reveal_phase=CardDistribution.RevealPhase.HIDDEN),
             user=self.request.user,
+            user__disabled_at__isnull=True,
             dismissed_at=None,
             deleted_at=None,
         ).select_related(
@@ -118,12 +119,16 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         return PublicCardSerializer
 
     def get_queryset(self):
-        queryset = Card.objects.filter(deleted_at=None) \
-            .select_related('user', 'user__location') \
-            .prefetch_related('asset_references')
+        queryset = Card.objects.filter(
+            user__disabled_at__isnull=True,
+            deleted_at=None
+        ).select_related('user', 'user__location') \
+         .prefetch_related('asset_references')
 
         if self.action == 'list':
-            queryset = queryset.filter(user=self.request.user).defer('content')
+            queryset = queryset.filter(
+                user=self.request.user,
+            ) # .defer('content')
 
         return queryset
 
@@ -245,6 +250,7 @@ class CardFavoriteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return CardFavoriteItem.objects.filter(
             user=self.request.user,
+            card__user__disabled_at__isnull=True,
             deleted_at=None
         ).select_related(
             'card',
