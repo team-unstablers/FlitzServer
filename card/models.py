@@ -251,6 +251,13 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         """
         카드의 공개 단계를 업데이트합니다.
         """
+
+        if self.card.user.disabled_at is not None:
+            self.reveal_phase = CardDistribution.RevealPhase.HIDDEN
+            self.deleted_at = timezone.now()
+            return
+
+
         if self.reveal_phase == CardDistribution.RevealPhase.FULLY_REVEALED:
             return
 
