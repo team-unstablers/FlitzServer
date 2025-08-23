@@ -83,12 +83,18 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             flag: DirectMessageFlag = serializer.save()
 
+            if flag.message:
+                message_content = flag.message.content
+            else:
+                message_content = None
+
             post_slack_message.delay(
                 "*새로운 DM 신고*\n"
-                f"> 신고자: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
-                f'> 신고 대상 대화 ID: {str(conversation.id)}\n'
-                f'> 신고 유형: {str(flag.reason)}\n'
-                f'> 추가 정보: {str(flag.user_description)}'
+                f"> *신고자*: {request.user.display_name} ({request.user.username}; `{request.user.id}`)\n"
+                f'> *신고 대상 메시지*: {message_content}\n'
+                f'> *신고 대상 대화 ID*: {str(conversation.id)}\n'
+                f'> *신고 유형*: {str(flag.reason)}\n'
+                f'> *추가 정보*: {str(flag.user_description)}'
             )
 
             return Response({
