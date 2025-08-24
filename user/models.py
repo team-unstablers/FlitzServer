@@ -249,7 +249,7 @@ class User(AbstractUser):
             raise ValueError("Uploaded file is not an image.")
 
         # 기존 이미지가 있으면 삭제
-        if self.profile_image:
+        if self.profile_image.name:
             self.profile_image.delete(save=False)
 
         # 썸네일 생성 후 저장
