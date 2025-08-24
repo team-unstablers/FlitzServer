@@ -7,6 +7,8 @@ class TokenRequestSerializer(serializers.Serializer):
     device_info = serializers.CharField(required=False, default='unknown')
     apns_token = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
+class TokenRefreshRequestSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField(required=True)
 
 class UserCreationSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
