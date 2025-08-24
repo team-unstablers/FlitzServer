@@ -1,5 +1,7 @@
 import json
 
+import jwt
+from django.conf import settings
 from django.db import transaction
 from django.http import HttpResponse
 from django.http.request import HttpRequest
@@ -7,10 +9,12 @@ from django.utils import timezone
 
 from user.models import User
 from user_auth.models import UserSession
-from user_auth.serializers import TokenRequestSerializer, UserCreationSerializer
+from user_auth.serializers import TokenRequestSerializer, UserCreationSerializer, TokenRefreshRequestSerializer
+
 
 # Create your views here.
 
+@transaction.atomic
 def request_token(request: HttpRequest):
     if request.method != 'POST':
         return HttpResponse(status=405)
@@ -52,14 +56,60 @@ def request_token(request: HttpRequest):
 
         # create token
         token = session.create_token()
+        refresh_token = session.update_refresh_token()
 
         response_json = json.dumps({
-            'token': token
+            'token': token,
+            'refresh_token': refresh_token
         }).encode()
 
         return HttpResponse(response_json, content_type='application/json', status=201)
     except Exception as e:
         # TODO: logging
         print(e)
+        return HttpResponse(status=401)
+
+@transaction.atomic
+def refresh_token_view(request: HttpRequest):
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    try:
+        data = json.loads(request.body)
+        serializer = TokenRefreshRequestSerializer(data=data)
+        if not serializer.is_valid():
+            return HttpResponse(status=400)
+
+        validated_data = serializer.validated_data
+
+        refresh_token = validated_data['refresh_token']
+        jwt_payload = jwt.decode(refresh_token, key=settings.SECRET_KEY, algorithms=['HS256'])
+
+        token_options = jwt_payload.get('x-flitz-options', '')
+        if ('--with-love' not in token_options) or ('--refresh' not in token_options):
+            return HttpResponse(status=401)
+
+        session_id = jwt_payload['sub']
+        session: UserSession = (UserSession.objects.filter(id=session_id,
+                                                           refresh_token=refresh_token,
+                                                           invalidated_at__isnull=True,
+                                                           user__disabled_at__isnull=True)
+                                .select_related('user', 'user__location')
+                                .first())
+
+        if session is None:
+            return HttpResponse(status=401)
+
+        token = session.create_token()
+        new_refresh_token = session.update_refresh_token()
+
+        response_json = json.dumps({
+            'token': token,
+            'refresh_token': new_refresh_token
+        }).encode()
+
+        return HttpResponse(response_json, content_type='application/json', status=201)
+    except jwt.InvalidTokenError:
+        return HttpResponse(status=401)
+    except Exception as e:
         return HttpResponse(status=401)
 

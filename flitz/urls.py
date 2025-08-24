@@ -25,7 +25,7 @@ from drf_yasg import openapi
 
 from messaging.views import DirectMessageConversationViewSet, DirectMessageViewSet, DirectMessageAttachmentViewSet
 from user.views import PublicUserViewSet
-from user_auth.views import request_token
+from user_auth.views import request_token, refresh_token_view
 
 from card.views import PublicCardViewSet, CardDistributionViewSet, CardFavoriteViewSet
 
@@ -68,6 +68,7 @@ router.register(r'notices', NoticeViewSet, basename='Notice')
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/token', csrf_exempt(request_token)),
+    path('auth/token/refresh', csrf_exempt(refresh_token_view)),
     path('admin/', admin.site.urls),
 ]
 

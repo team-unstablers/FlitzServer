@@ -3,7 +3,7 @@ from typing import Optional
 
 import jwt
 
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 
@@ -20,6 +20,8 @@ class UserSession(BaseModel):
     initiated_from = models.CharField(max_length=128, null=False, blank=False)
     
     apns_token = models.CharField(max_length=256, null=True, blank=True)
+    refresh_token = models.CharField(max_length=512, null=True, blank=True, unique=True)
+    token_refreshed_at = models.DateTimeField(null=True, blank=True)
 
     expires_at = models.DateTimeField(null=True, blank=True)
     invalidated_at = models.DateTimeField(null=True, blank=True)
@@ -33,11 +35,32 @@ class UserSession(BaseModel):
         apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id, mutable_content=mutable_content)
 
     def create_token(self) -> str:
+        now = timezone.now()
+
         token = jwt.encode({
             'sub': str(self.id),
-            'iat': timezone.now(),
-            'exp': timezone.now() + timedelta(days=30),
+            'iat': now,
+            'exp': now + timedelta(hours=1),
             'x-flitz-options': '--with-love',
         }, key=settings.SECRET_KEY, algorithm='HS256')
 
         return token
+
+    @transaction.atomic
+    def update_refresh_token(self) -> str:
+        now = timezone.now()
+
+        self.refresh_token = jwt.encode({
+            'sub': str(self.id),
+            'iat': now,
+            'exp': now + timedelta(days=30),
+            'x-flitz-options': '--with-love --refresh',
+        }, key=settings.SECRET_KEY, algorithm='HS256')
+
+        self.token_refreshed_at = now
+
+        self.save(update_fields=['refresh_token', 'token_refreshed_at', 'updated_at'])
+
+        return self.refresh_token
+
+

@@ -21,14 +21,21 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
         token = auth_header[7:]
 
         try:
-            jwt_payload = jwt.decode(token, key= settings.SECRET_KEY, algorithms=['HS256'])
+            jwt_payload = jwt.decode(token, key=settings.SECRET_KEY, algorithms=['HS256'])
             session_id = jwt_payload['sub']
+            token_options = jwt_payload.get('x-flitz-options', '')
 
-            session: UserSession = (UserSession.objects.filter(id=session_id)
+            if token_options != '--with-love':
+                # XXX: refresh token을 사용한 인증을 막는다
+                return None
+
+            session: UserSession = (UserSession.objects.filter(id=session_id,
+                                                               invalidated_at__isnull=True,
+                                                               user__disabled_at__isnull=True)
                                     .select_related('user', 'user__location')
                                     .first())
 
-            if session is None or session.invalidated_at is not None:
+            if session is None:
                 return None
 
             if session.expires_at is not None:
