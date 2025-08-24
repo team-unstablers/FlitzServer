@@ -63,27 +63,3 @@ def request_token(request: HttpRequest):
         print(e)
         return HttpResponse(status=401)
 
-
-def create_user(request: HttpRequest):
-    if request.method != 'POST':
-        return HttpResponse(status=405)
-
-    try:
-        data = json.loads(request.body)
-        serializer = UserCreationSerializer(data=data)
-        if not serializer.is_valid():
-            return HttpResponse(status=400)
-        
-        validated_data = serializer.validated_data
-
-        user = User.objects.create(
-            username=validated_data['username'],
-        )
-        user.set_password(validated_data['password'])
-        user.save()
-
-        return HttpResponse(status=201)
-    except Exception as e:
-        # TODO: logging
-        print(e)
-        return HttpResponse(status=400)

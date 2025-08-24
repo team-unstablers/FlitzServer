@@ -11,7 +11,6 @@ from unittest.mock import patch, MagicMock
 from rest_framework.test import APITestCase
 
 from user_auth.models import UserSession
-from user_auth.views import request_token, create_user
 
 User = get_user_model()
 
