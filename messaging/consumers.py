@@ -9,6 +9,7 @@ from django.conf import settings
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from asgiref.sync import sync_to_async
+from django.db import transaction
 
 from messaging.models import DirectMessageConversation, DirectMessage, DirectMessageParticipant
 from user_auth.models import UserSession
@@ -80,12 +81,15 @@ class DirectMessageConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_read_at(self, user_id):
-        participant = DirectMessageParticipant.objects.get(
-            conversation_id=self.conversation_id,
-            user_id=user_id
-        )
-        participant.read_at = timezone.now()
-        participant.save()
+        with transaction.atomic():
+            participant = DirectMessageParticipant.objects.get(
+                conversation_id=self.conversation_id,
+                user_id=user_id
+            )
+            participant.read_at = timezone.now()
+            participant.unread_count = 0
+            participant.save(update_fields=['read_at', 'unread_count', 'updated_at'])
+
         return participant.read_at
 
     async def connect(self):

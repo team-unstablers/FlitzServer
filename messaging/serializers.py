@@ -27,7 +27,7 @@ class DirectMessageParticipantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DirectMessageParticipant
-        read_only_fields = ('user', 'read_at')
+        read_only_fields = ('user', 'read_at', 'unread_count')
         fields = (*read_only_fields,)
 
 

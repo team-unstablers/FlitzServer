@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.utils import timezone
 
-from django.db import models
+from django.db import models, transaction
 from django.contrib.postgres.indexes import GinIndex
 from uuid_v7.base import uuid7
 
@@ -65,6 +65,10 @@ class DirectMessageConversation(BaseModel):
 
         return conversation
 
+    @transaction.atomic
+    def increment_unread_count(self, exclude: User):
+        self.participants.exclude(user=exclude).update(unread_count=models.F('unread_count') + 1)
+
 class DirectMessageParticipant(BaseModel):
     class Meta:
         unique_together = ('conversation', 'user')
@@ -82,6 +86,7 @@ class DirectMessageParticipant(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     read_at = models.DateTimeField(auto_now=True)
+    unread_count = models.IntegerField(default=0)
 
     deleted_at = models.DateTimeField(null=True, blank=True)
 

@@ -168,6 +168,7 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
 
         conversation = self.get_conversation()
         conversation.latest_message_id = created_instance.id
+        conversation.increment_unread_count(exclude=request.user)
         conversation.save()
         
         # 실시간 메시지 이벤트 발송
@@ -195,12 +196,14 @@ class DirectMessageViewSet(viewsets.ModelViewSet):
         
         # 참여자의 읽음 상태 업데이트
         try:
-            participant = DirectMessageParticipant.objects.get(
-                conversation=conversation,
-                user=request.user
-            )
-            participant.read_at = timezone.now()
-            participant.save()
+            with transaction.atomic():
+                participant = DirectMessageParticipant.objects.get(
+                    conversation=conversation,
+                    user=request.user
+                )
+                participant.read_at = timezone.now()
+                participant.unread_count = 0
+                participant.save()
             
             # 읽음 상태 이벤트 발송
             channel_layer = get_channel_layer()
@@ -325,8 +328,9 @@ class DirectMessageAttachmentViewSet(viewsets.ModelViewSet):
             attachment.message = message
             attachment.save()
 
-        conversation.latest_message = message
-        conversation.save()
+            conversation.latest_message = message
+            conversation.increment_unread_count(exclude=request.user)
+            conversation.save(update_fields=['latest_message', 'updated_at'])
         
         # 첨부파일 메시지에 대한 실시간 이벤트 발송
         channel_layer = get_channel_layer()
