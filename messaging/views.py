@@ -111,7 +111,7 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-    @action(detail=False, methods=['POST'], url_path='total_unread_count')
+    @action(detail=False, methods=['GET'], url_path='total_unread_count')
     def total_unread_count(self, request: Request, *args, **kwargs):
         """
         사용자의 전체 읽지 않은 DM 대화 수를 반환하는 API 엔드포인트
