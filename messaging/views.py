@@ -1,7 +1,7 @@
 from dataclasses import asdict
 
 from django.core.files.uploadedfile import UploadedFile
-from django.db import transaction
+from django.db import transaction, models
 from django.http import Http404
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status, filters
@@ -109,6 +109,23 @@ class DirectMessageConversationViewSet(viewsets.ModelViewSet):
                 'is_success': False,
                 'reason': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(detail=False, methods=['POST'], url_path='total_unread_count')
+    def total_unread_count(self, request: Request, *args, **kwargs):
+        """
+        사용자의 전체 읽지 않은 DM 대화 수를 반환하는 API 엔드포인트
+        """
+        total_unread = DirectMessageParticipant.objects \
+            .filter(
+                user=request.user,
+                deleted_at__isnull=True
+            ) \
+            .aggregate(total=models.Sum('unread_count'))['total'] or 0
+
+        return Response({
+            'total_unread_count': total_unread
+        }, status=status.HTTP_200_OK)
 
 
 class DirectMessageViewSet(viewsets.ModelViewSet):
