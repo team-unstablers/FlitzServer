@@ -5,12 +5,13 @@ from datetime import datetime, timezone
 from django.conf import settings
 
 from rest_framework import authentication
+from rest_framework.request import Request
 
 from user.models import User
 from user_auth.models import UserSession
 
 class UserSessionAuthentication(authentication.BaseAuthentication):
-    def authenticate(self, request):
+    def authenticate(self, request: Request):
         if 'Authorization' not in request.headers:
             return None
 
@@ -42,11 +43,12 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
                 if session.expires_at < datetime.now(tz=timezone.utc):
                     return None
 
-            try:
-                session.user.update_last_seen()
-            except Exception as e:
-                # Log the error or handle it as needed
-                print(f"Error updating last seen for user {session.user.id}: {e}")
+            if not request.get_full_path().startswith('/wave/'):
+                try:
+                    session.user.update_last_seen()
+                except Exception as e:
+                    # Log the error or handle it as needed
+                    print(f"Error updating last seen for user {session.user.id}: {e}")
 
             return session.user, session
 
