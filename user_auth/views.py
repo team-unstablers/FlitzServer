@@ -7,9 +7,10 @@ from django.http import HttpResponse
 from django.http.request import HttpRequest
 from django.utils import timezone
 
+from flitz.turnstile import validate_turnstile
 from user.models import User
 from user_auth.models import UserSession
-from user_auth.serializers import TokenRequestSerializer, UserCreationSerializer, TokenRefreshRequestSerializer
+from user_auth.serializers import TokenRequestSerializer, TokenRefreshRequestSerializer
 
 
 # Create your views here.
@@ -23,7 +24,19 @@ def request_token(request: HttpRequest):
         serializer = TokenRequestSerializer(data=data)
         if not serializer.is_valid():
             return HttpResponse(status=400)
-        
+
+        turnstile_token = serializer.validated_data['turnstile_token']
+        remote_addr = request.META.get('REMOTE_ADDR')
+        turnstile_response = validate_turnstile(turnstile_token) # TODO: remote_addr 전달
+
+        if not turnstile_response['success']:
+            print(f"turnstile failed: {turnstile_response}")
+            return HttpResponse(status=401)
+
+        if turnstile_response['action'] != 'request_token':
+            print(f"turnstile action mismatch: {turnstile_response}")
+            return HttpResponse(status=401)
+
         validated_data = serializer.validated_data
 
         try:
