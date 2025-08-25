@@ -26,13 +26,19 @@ class UserSession(BaseModel):
     expires_at = models.DateTimeField(null=True, blank=True)
     invalidated_at = models.DateTimeField(null=True, blank=True)
 
-    def send_push_message(self, title: str, body: str, data: dict, thread_id: Optional[str] = None, mutable_content: bool = False):
+    def send_push_message(self,
+                          title: str,
+                          body: str,
+                          data: dict,
+                          thread_id: Optional[str] = None,
+                          mutable_content: bool = False,
+                          sound: Optional[str] = None):
         """
         사용자에게 푸시 메시지를 보냅니다.
         """
 
         apns = APNS.default()
-        apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id, mutable_content=mutable_content)
+        apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
 
     def create_token(self) -> str:
         now = timezone.now()

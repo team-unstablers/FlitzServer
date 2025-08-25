@@ -23,9 +23,9 @@ from user_auth.models import UserSession
 logger: Logger = get_task_logger(__name__)
 
 @shared_task
-def send_push_message(user_id: UUID, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
+def send_push_message(user_id: UUID, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False, sound: Optional[str]=None):
     user = User.objects.get(id=user_id)
-    user.send_push_message(type, title, body, data, thread_id=thread_id, mutable_content=mutable_content)
+    user.send_push_message(type, title, body, data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
 
 @shared_task
 def wake_up_apps():

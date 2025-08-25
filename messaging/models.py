@@ -155,7 +155,8 @@ class DirectMessage(BaseModel):
                     'conversation_id': str(self.conversation.id)
                 },
                 thread_id=str(self.conversation.id),
-                mutable_content=True
+                mutable_content=True,
+                sound='message.aif'
             )
 
     def get_content_with_url(self) -> dict:

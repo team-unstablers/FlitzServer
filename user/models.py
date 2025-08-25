@@ -160,7 +160,14 @@ class User(AbstractUser):
         self.phone_number = normalized_phone_number
         self.phone_number_hashed = hash_phone_number(normalized_phone_number)
 
-    def send_push_message(self, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False):
+    def send_push_message(self,
+                          type: PushNotificationType,
+                          title: str,
+                          body: str,
+                          data: Optional[dict]=None,
+                          thread_id: Optional[str]=None,
+                          mutable_content: bool=False,
+                          sound: Optional[str]=None):
         """
         사용자에게 푸시 메시지를 보냅니다.
 
@@ -173,7 +180,7 @@ class User(AbstractUser):
         if not self.settings.allows_push(type):
             return
 
-        self.primary_session.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content)
+        self.primary_session.send_push_message(title, body, data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None, force_timezone_update: bool=False):
         from location.models import UserLocation
@@ -401,7 +408,8 @@ class UserMatch(BaseModel):
                 'user_profile_image_url': user_b.profile_image_url,
                 'conversation_id': str(conversation.id)
             },
-            mutable_content=True
+            mutable_content=True,
+            sound='wave.aif'
         )
 
         user_tasks.send_push_message.delay_on_commit(
@@ -415,7 +423,8 @@ class UserMatch(BaseModel):
                 'user_profile_image_url': user_a.profile_image_url,
                 'conversation_id': str(conversation.id)
             },
-            mutable_content=True
+            mutable_content=True,
+            sound='wave.aif'
         )
 
     @classmethod
