@@ -367,7 +367,7 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
         AND(
             - 사용자의 마지막 위치로부터 500m 이상 멀어져야 함
             OR(
-                - 카드 교환 지점으로부터 3km 이상 멀어져야 함
+                - 카드 교환 지점으로부터 1km 이상 멀어져야 함
                 - 카드 교환 시점으로부터 3시간 이상 경과해야 함
             )
         )
@@ -375,7 +375,7 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
 
         REVEAL_USER_DISTANCE_HARD = 0.5 # 500 meters
 
-        REVEAL_DISTANCE_HARD = 0.3 # 300 meters
+        REVEAL_DISTANCE_HARD = 1 # 1 km
         REVEAL_TIMEDELTA_HARD = timedelta(hours=3)
 
         user_distance = self.opponent.location.distance_to(self.user.location)
