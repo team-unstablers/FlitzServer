@@ -340,7 +340,7 @@ class NiceAPI(NiceAPIBase):
         context = cache.get('fz:core:niceapi_easy_context')
 
         if context and self.crypto_easy_is_valid(context):
-                return context
+            return context
 
         context = self.crypto_easy_start()
         cache.set('fz:core:niceapi_easy_context', context)
