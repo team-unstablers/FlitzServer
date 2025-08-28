@@ -82,6 +82,7 @@ class NiceEasyContext(TypedDict):
     req_no: str
     enc_mode: str
     token_val: str
+    token_version_id: str
     token_expires_at: int
     key: str
     iv: str
@@ -238,6 +239,8 @@ class NiceAPIBase:
         now = datetime.now(tz=KST)
 
         token_val = token_response['dataBody']['token_val']
+        token_version_id = token_response['dataBody']['token_version_id']
+
         expires_at = int(now.timestamp() + token_response['dataBody']['period'])
 
         key, iv, hmac_key = self.crypto_generate_key(req_dtim, req_no, token_val)
@@ -247,6 +250,7 @@ class NiceAPIBase:
             'req_no': req_no,
             'enc_mode': enc_mode,
             'token_val': token_val,
+            'token_version_id': token_version_id,
             'token_expires_at': expires_at,
             'key': key,
             'iv': iv,
