@@ -285,7 +285,11 @@ class NiceAPIBase:
         unpad = (lambda s: s[:-ord(s[len(s) - 1:])])
 
         # HMAC-SHA256 검증
-        expected_hmac_digest = hmac.new(context['hmac_key'].encode(), encrypted_b64.encode(), hashlib.sha256).digest()
+        expected_hmac_digest = hmac.new(
+            context['hmac_key'].encode(),
+            encrypted_b64.encode(),
+            hashlib.sha256
+        ).digest()
         expected_hmac_b64 = base64.b64encode(expected_hmac_digest).decode()
 
         if not hmac.compare_digest(expected_hmac_b64, hmac_b64):
@@ -294,9 +298,9 @@ class NiceAPIBase:
         encrypted = base64.b64decode(encrypted_b64)
         cipher = AES.new(context['key'].encode(), AES.MODE_CBC, context['iv'].encode())
         decrypted_padded = cipher.decrypt(encrypted)
-        decrypted = unpad(decrypted_padded)
+        decrypted: bytes = unpad(decrypted_padded)
 
-        response = json.loads(decrypted)
+        response = json.loads(decrypted.decode("cp949"))
 
         # validate requestno
         if response.get('requestno') != requestno:
@@ -352,3 +356,16 @@ class NiceAPI(NiceAPIBase):
         cache.set('fz:core:niceapi_easy_context', context)
 
         return context
+
+
+if __name__ == '__main__':
+    niceapi = NiceAPI.shared()
+
+    # enc_data=&integrity_value=
+
+    context = {}
+
+    payload = ''
+    hmac_b64 = ''
+
+    niceapi.crypto_easy_decrypt(context, payload, hmac_b64, 'test')
