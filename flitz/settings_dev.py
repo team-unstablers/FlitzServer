@@ -86,3 +86,5 @@ GPG_PUBLIC_KEY_FILE = 'flitz-dev.public.asc'
 
 SLACK_WEBHOOK_URL = os.environ.get('FLITZ_SLACK_WEBHOOK_URL')
 
+MAILGUN_API_KEY = os.environ.get('FLITZ_MAILGUN_API_KEY')
+MAILGUN_DOMAIN = os.environ.get('FLITZ_MAILGUN_DOMAIN')

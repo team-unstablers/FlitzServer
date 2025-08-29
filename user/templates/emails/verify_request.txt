@@ -1,0 +1,13 @@
+{% load i18n %}
+{% trans "email.verify_request.title" %}
+
+{% blocktrans with name=username %}{{ name }}님 안녕하세요,{% endblocktrans %}
+
+{% trans "email.verify_request.code_below" %}
+
+{{ verification_code }}
+
+{% trans "email.verify_request.code_notice" %}
+
+{% trans "email.footer.thx" %}
+{% trans "email.footer.flitz_team" %}

@@ -103,6 +103,39 @@ class SelfUserIdentitySerializer(serializers.ModelSerializer):
         model = UserIdentity
         fields = ('gender', 'is_trans', 'display_trans_to_others', 'preferred_genders', 'welcomes_trans', 'trans_prefers_safe_match')
 
+class UserSetEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, allow_blank=False, allow_null=False)
+
+class UserVerifyEmailSerializer(serializers.Serializer):
+    verification_code = serializers.CharField(required=True, allow_blank=False, allow_null=False)
+
+class UserStartPhoneVerificationSerializer(serializers.Serializer):
+    country_code = serializers.CharField(max_length=2, required=True)
+    phone_number = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+class UserCompletePhoneVerificationSerializer(serializers.Serializer):
+    verification_code = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+    encrypted_payload = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    payload_hmac = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+class UserRegistrationSessionStartSerializer(serializers.Serializer):
+    country_code = serializers.CharField(max_length=2, required=True)
+    agree_marketing_notifications = serializers.BooleanField(required=True)
+
+    device_info = serializers.CharField(required=True)
+    apns_token = serializers.CharField(required=True, allow_null=True, allow_blank=True)
+
+    turnstile_token = serializers.CharField(required=True, allow_null=False, allow_blank=False)
+
+class UserRegistrationStartPhoneVerificationSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+class UserRegistrationCompletePhoneVerificationSerializer(serializers.Serializer):
+    verification_code = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+    encrypted_payload = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    payload_hmac = serializers.CharField(required=True, allow_null=True, allow_blank=False)
 
 class UserRegistrationSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=24, allow_blank=False, allow_null=False)
@@ -113,6 +146,8 @@ class UserRegistrationSerializer(serializers.Serializer):
     title = serializers.CharField(allow_blank=False, max_length=20)
     bio = serializers.CharField(allow_blank=False, max_length=600)
     hashtags = HashtagListField()
+
+    force_use_phone_number = serializers.BooleanField(required=False, default=False)
 
 class UserSettingsSerializer(serializers.ModelSerializer):
     """

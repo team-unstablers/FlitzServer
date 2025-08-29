@@ -3,11 +3,13 @@ import jwt
 from datetime import datetime, timezone
 
 from django.conf import settings
+from django.core.cache import cache
 
 from rest_framework import authentication
 from rest_framework.request import Request
 
 from user.models import User
+from user.registration import UserRegistrationContext
 from user_auth.models import UserSession
 
 class UserSessionAuthentication(authentication.BaseAuthentication):
@@ -51,6 +53,35 @@ class UserSessionAuthentication(authentication.BaseAuthentication):
                     print(f"Error updating last seen for user {session.user.id}: {e}")
 
             return session.user, session
+
+        except jwt.InvalidTokenError:
+            return None
+
+class UserRegistrationSessionAuthentication(authentication.BaseAuthentication):
+    def authenticate(self, request: Request):
+        if 'Authorization' not in request.headers:
+            return None
+
+        auth_header = request.headers['Authorization']
+        if not auth_header.startswith('Bearer '):
+            return None
+
+        token = auth_header[7:]
+
+        try:
+            jwt_payload = jwt.decode(token, key=settings.SECRET_KEY, algorithms=['HS256'])
+            session_id = jwt_payload['sub']
+            token_options = jwt_payload.get('x-flitz-options', '')
+
+            if not ('--with-love' in token_options and '--registration' in token_options):
+                return None
+
+            context: UserRegistrationContext = cache.get(f'fz:user_registration:{session_id}')
+
+            if context is None:
+                return None
+
+            return context, None
 
         except jwt.InvalidTokenError:
             return None
