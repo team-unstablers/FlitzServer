@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -222,3 +224,15 @@ APNS_TEAM_ID = "XHA76UVA95"
 APNS_KEY_ID = "CM6QLAL76W"
 APNS_BUNDLE_ID = "pl.unstabler.flitz"
 APNS_USE_SANDBOX = True
+
+SLACK_WEBHOOK_URL = os.environ.get('FLITZ_SLACK_WEBHOOK_URL')
+
+MAILGUN_API_KEY = os.environ.get('FLITZ_MAILGUN_API_KEY')
+MAILGUN_DOMAIN = os.environ.get('FLITZ_MAILGUN_DOMAIN')
+
+NICEAPI_API_HOST = 'https://svc.niceapi.co.kr:22001'
+
+NICEAPI_CLIENT_ID = os.environ.get('FLITZ_NICEAPI_CLIENT_ID')
+NICEAPI_CLIENT_SECRET = os.environ.get('FLITZ_NICEAPI_CLIENT_SECRET')
+
+NICEAPI_PRODUCT_ID = '2101979031' # 본인확인 (통합형)

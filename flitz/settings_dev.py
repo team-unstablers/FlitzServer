@@ -1,7 +1,8 @@
 """
 Development environment settings for Flitz project.
 """
-import os
+from dotenv import load_dotenv
+load_dotenv('.env.development')
 
 from .settings_base import *
 
@@ -83,8 +84,3 @@ APNS_USE_SANDBOX = True
 PHONE_NUMBER_HASH_SALT = 'd634]Asp+,!a?pzbp*V2LM4x%qDmbE#.'
 
 GPG_PUBLIC_KEY_FILE = 'flitz-dev.public.asc'
-
-SLACK_WEBHOOK_URL = os.environ.get('FLITZ_SLACK_WEBHOOK_URL')
-
-MAILGUN_API_KEY = os.environ.get('FLITZ_MAILGUN_API_KEY')
-MAILGUN_DOMAIN = os.environ.get('FLITZ_MAILGUN_DOMAIN')
