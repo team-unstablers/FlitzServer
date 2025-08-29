@@ -180,7 +180,7 @@ class NiceAPIBase:
         """
         1시간동안 유효한 휴대폰 본인인증용 토큰을 요청합니다.
         """
-        url = f'{self.api_host}/digital/niceid/v1.0/common/crypto/token'
+        url = f'{self.api_host}/digital/niceid/api/v1.0/common/crypto/token'
 
         response = requests.post(
             url,
