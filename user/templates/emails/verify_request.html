@@ -1,0 +1,18 @@
+{% load i18n %}
+<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">
+  {% trans "email.verify_request.code_below" %}
+</div>
+
+<div style="width: 100%; max-width: 640px; background: white;">
+    <div style="height: 56px; width: 100%; max-width: 640px; text-align: right;">
+        <img src="cid:fz_logo_32px.png" width="76" height="32" style="padding: 12px 12px;" />
+    </div>
+    <div style="padding: 16px; font-size: 16px; line-height: 1.5; color: #333; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <h2>{% trans "email.verify_request.title" %}</h2>
+        <p>{% blocktrans with name=username %}{{ name }}님 안녕하세요,{% endblocktrans %}</p>
+        <p>{% trans "email.verify_request.code_below" %}</p>
+        <p style="text-align: center; font-size: 24px; font-weight: bold; margin: 24px 0;">{{ verification_code }}</p>
+        <p>{% trans "email.verify_request.code_notice" %}</p>
+        <p>{% trans "email.footer.thx" %}<br/>{% trans "email.footer.flitz_team" %}</p>
+    </div>
+</div>

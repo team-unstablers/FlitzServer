@@ -184,3 +184,6 @@ flitz-devenv/db-data
 
 /flitz*.private.asc
 /flitz*.public.asc
+
+.env.production
+.env.development

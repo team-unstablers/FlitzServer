@@ -11,10 +11,12 @@ from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
 from django.db import transaction
 from django.db.models import Q
-from django.utils import timezone
+from django.template.loader import render_to_string
+from django.utils import timezone, translation
 
 from flitz.apns import APNS
 from flitz.gpgenc import gpg_encrypt
+from flitz.utils.mailgun import send_email
 from user.models import User, PushNotificationType, UserIdentity, UserGenderBit, UserDeletionPhase, \
     UserDeletionReviewRequestReason, UserDeletionReviewRequest, DeletedUserArchive
 from user.objdef import DeletedUserArchiveData
@@ -26,6 +28,26 @@ logger: Logger = get_task_logger(__name__)
 def send_push_message(user_id: UUID, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False, sound: Optional[str]=None):
     user = User.objects.get(id=user_id)
     user.send_push_message(type, title, body, data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
+
+@shared_task
+def send_templated_email(to: str, subject: str, template_name: str, ctx: dict):
+    # TODO: 사용자 선호 언어
+    lang = 'ko'
+
+    with translation.override(lang):
+        translated_subject = translation.gettext(subject)
+        html = render_to_string(f"emails/{template_name}.html", ctx)
+        text = render_to_string(f"emails/{template_name}.txt", ctx)
+
+    send_email(
+        to,
+        translated_subject,
+        text,
+        html,
+        files=[
+            ('inline', ('fz_logo_32px.png', open('user/assets/emails/fz_logo_32px.png', 'rb'), 'image/png'))
+        ]
+    )
 
 @shared_task
 def wake_up_apps():
