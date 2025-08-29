@@ -113,8 +113,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         except serializers.ValidationError as e:
             return Response({
                 'is_success': False,
-                'reason': e.detail,
-            }, status=299) # HACK: 앱에서 validate()를 빼야 합니다
+                'reason': "fz.user.passwd.invalid_password",
+            }, status=400)
 
         return Response({'is_success': True}, status=200)
 
@@ -595,8 +595,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         except serializers.ValidationError as e:
             return Response({
                 'is_success': False,
-                'reason': str(e.detail.get('password', ['Invalid password'])[0]),
-            }, status=299)
+                'reason': 'fz.auth.invalid_password',
+            }, status=400)
 
         return Response({'is_success': True}, status=200)
 
