@@ -607,7 +607,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         if not serializer.is_valid():
             return Response({
                 'is_success': False,
-                'reason': 'Invalid request'
+                'reason': 'fz.auth.invalid_request',
             }, status=400)
 
         data = serializer.validated_data
