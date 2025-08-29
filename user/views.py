@@ -30,7 +30,8 @@ from user.registration import UserRegistrationContext
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer, \
     UserFlagSerializer, UserRegistrationSessionStartSerializer, UserRegistrationStartPhoneVerificationSerializer, \
-    UserRegistrationCompletePhoneVerificationSerializer, UserSetEmailSerializer, UserVerifyEmailSerializer
+    UserRegistrationCompletePhoneVerificationSerializer, UserSetEmailSerializer, UserVerifyEmailSerializer, \
+    UserStartPhoneVerificationSerializer, UserCompletePhoneVerificationSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from flitz.tasks import post_slack_message
@@ -347,6 +348,111 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         cache.delete(f'fz:user_email_change:{user.id}')
 
         return Response({'is_success': True}, status=200)
+
+    @action(detail=False, methods=['POST'], url_path='phone-verification/start', name='start_phone_verification')
+    def start_phone_verification(self, request, *args, **kwargs):
+        user: User = request.user
+
+        serializer = UserStartPhoneVerificationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.invalid_request'
+            }, status=400)
+
+        payload = serializer.validated_data
+
+        from user.verification.logics import start_phone_verification
+
+        response, private_data = start_phone_verification({
+            'country_code': payload['country_code'],
+            'phone_number': payload['phone_number']
+        })
+
+        # set private data and update context
+
+        context = {
+            'country_code': payload['country_code'],
+            'phone_number': payload['phone_number'],
+
+            'private_data': private_data,
+        }
+
+        cache.set(f'fz:phone_verification:{user.id}', context, timeout=(15 * 60))
+
+        return Response({
+            'is_success': True,
+            'additional_data': response.get('additional_data', {}),
+        }, status=200)
+
+    @action(detail=False, methods=['POST'], url_path='phone-verification/complete', name='complete_phone_verification')
+    def complete_phone_verification(self, request, *args, **kwargs):
+        user: User = request.user
+
+        serializer = UserCompletePhoneVerificationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.invalid_request'
+            }, status=400)
+
+        payload = serializer.validated_data
+
+        context = cache.get(f'fz:phone_verification:{user.id}', None)
+        if context is None:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.session_expired'
+            }, status=400)
+
+        args: CompletePhoneVerificationArgs = {
+            'country_code': context['country_code'],
+
+            **payload
+        }
+
+        from user.verification.logics import complete_phone_verification
+        private_data = context.get('private_data', None)
+
+        try:
+            response = complete_phone_verification(args, private_data)
+        except AdultVerificationError:
+            # 성인 인증 실패
+
+            # TODO: 사용자를 정지 처리하거나 추가 조치를 취해야 함
+
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.adult_verification_failed'
+            }, status=400)
+        except Exception as e:
+            # TODO: report to Sentry
+
+            return Response({
+                'is_success': False,
+                'reason': f'fz.server_error'
+            }, status=400)
+
+        with transaction.atomic():
+            # 휴대폰 번호 중복 확인
+            if User.objects.filter(
+                phone_number=response['phone_number']
+            ).exists():
+                # 헉, 이미 사용 중인 번호네?
+
+                User.objects.filter(
+                    phone_number=response['phone_number']
+                ).update(phone_number=None)
+
+            user.country = context['country_code']
+            user.phone_number = response['phone_number']
+            user.save()
+
+        cache.delete(f'fz:user_phone_verification:{user.id}')
+
+        return Response({
+            'is_success': True,
+        }, status=200)
 
     @action(detail=False, methods=['GET'], url_path=r'by-username/(?P<username>[a-zA-Z0-9_]+)')
     def get_by_username(self, request, username, *args, **kwargs):

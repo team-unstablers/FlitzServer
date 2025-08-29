@@ -109,6 +109,16 @@ class UserSetEmailSerializer(serializers.Serializer):
 class UserVerifyEmailSerializer(serializers.Serializer):
     verification_code = serializers.CharField(required=True, allow_blank=False, allow_null=False)
 
+class UserStartPhoneVerificationSerializer(serializers.Serializer):
+    country_code = serializers.CharField(max_length=2, required=True)
+    phone_number = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+class UserCompletePhoneVerificationSerializer(serializers.Serializer):
+    verification_code = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+    encrypted_payload = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    payload_hmac = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
 class UserRegistrationSessionStartSerializer(serializers.Serializer):
     country_code = serializers.CharField(max_length=2, required=True)
     agree_marketing_notifications = serializers.BooleanField(required=True)
