@@ -349,7 +349,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response({'is_success': True}, status=200)
 
-    @action(detail=False, methods=['POST'], url_path='phone-verification/start', name='start_phone_verification')
+    @action(detail=False, methods=['POST'], url_path='phone-verification/start', url_name='start_phone_verification')
     def start_phone_verification(self, request, *args, **kwargs):
         user: User = request.user
 
@@ -385,7 +385,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             'additional_data': response.get('additional_data', {}),
         }, status=200)
 
-    @action(detail=False, methods=['POST'], url_path='phone-verification/complete', name='complete_phone_verification')
+    @action(detail=False, methods=['POST'], url_path='phone-verification/complete', url_name='complete_phone_verification')
     def complete_phone_verification(self, request, *args, **kwargs):
         user: User = request.user
 
@@ -601,7 +601,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({'is_success': True}, status=200)
 
 
-    @action(detail=False, methods=['POST'], url_path='register/start', name='start_registration')
+    @action(detail=False, methods=['POST'], url_path='register/start', url_name='start_registration')
     def start_registration(self, request, *args, **kwargs):
         """
         회원가입 세션을 시작합니다.
@@ -660,7 +660,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             'token': token,
         }, status=201)
 
-    @action(detail=False, methods=['POST'], url_path='register/phone-verification/start', name='registration_start_phone_verification')
+    @action(detail=False, methods=['POST'], url_path='register/phone-verification/start', url_name='registration_start_phone_verification')
     def registration_start_phone_verification(self, request, *args, **kwargs):
         context: UserRegistrationContext = request.user
 
@@ -689,7 +689,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             'additional_data': response.get('additional_data', {}),
         }, status=200)
 
-    @action(detail=False, methods=['POST'], url_path='register/phone-verification/complete', name='registration_complete_phone_verification')
+    @action(detail=False, methods=['POST'], url_path='register/phone-verification/complete', url_name='registration_complete_phone_verification')
     def registration_complete_phone_verification(self, request, *args, **kwargs):
         context: UserRegistrationContext = request.user
 
@@ -758,7 +758,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         }, status=200)
 
 
-    @action(detail=False, methods=['POST'], url_path='register/complete', name='complete_registration')
+    @action(detail=False, methods=['POST'], url_path='register/complete', url_name='complete_registration')
     def complete_registration(self, request, *args, **kwargs):
         context: UserRegistrationContext = request.user
 
