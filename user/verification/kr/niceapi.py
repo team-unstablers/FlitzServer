@@ -81,6 +81,7 @@ class NiceEasyContext(TypedDict):
     req_dtim: str
     req_no: str
     enc_mode: str
+    site_code: str
     token_val: str
     token_version_id: str
     token_expires_at: int
@@ -249,6 +250,7 @@ class NiceAPIBase:
             'req_dtim': req_dtim,
             'req_no': req_no,
             'enc_mode': enc_mode,
+            'site_code': token_response['dataBody']['site_code'],
             'token_val': token_val,
             'token_version_id': token_version_id,
             'token_expires_at': expires_at,

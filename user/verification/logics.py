@@ -80,7 +80,7 @@ def start_phone_verification_kr(args: StartPhoneVerificationArgs) -> Tuple[Start
     auth_request = NiceAuthRequest(
         requestno=nonce,
         returnurl=f'flitz://register/phone-verification/kr/callback',
-        sitecode=settings.NICEAPI_SITE_CODE,
+        sitecode=niceapi_context['site_code'],
         authtype='M',
         methodtype='get',
         popupyn='N',
