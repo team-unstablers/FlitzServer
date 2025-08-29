@@ -633,7 +633,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             device_info=data['device_info'],
             apns_token=data['apns_token'],
 
-            country_code=data['country_code'],
+            country_code=data['country_code'].upper(),
             agree_marketing_notifications=data['agree_marketing_notifications'],
 
             phone_verification_state=None,
@@ -671,7 +671,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         from user.verification.logics import start_phone_verification
 
         response, private_data = start_phone_verification({
-            'country_code': context.country_code,
+            'country_code': context.country_code.upper(),
             'phone_number': payload.get('phone_number', None)
         })
 
@@ -698,7 +698,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         payload = serializer.validated_data
 
         args: CompletePhoneVerificationArgs = {
-            'country_code': context.country_code,
+            'country_code': context.country_code.upper(),
 
             **payload
         }
