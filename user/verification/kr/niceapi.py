@@ -229,7 +229,7 @@ class NiceAPIBase:
         # 20210622162600 -> YYYYMMDDHHMMSS
         req_dtim = now.strftime('%Y%m%d%H%M%S')
         # nonce (~30bytes)
-        req_no = f'FLITZ_{secrets.token_urlsafe(20)}'
+        req_no = f'FLITZ_{secrets.token_urlsafe(12)}'
         # AES128-CBC-PKCS5
         enc_mode = "1"
 

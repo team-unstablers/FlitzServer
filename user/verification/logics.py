@@ -70,7 +70,7 @@ def start_phone_verification_kr(args: StartPhoneVerificationArgs) -> Tuple[Start
 
     niceapi = NiceAPI.shared()
 
-    nonce = f'FLITZ_USR_{secrets.token_urlsafe()}'
+    nonce = f'FLITZ_USR_{secrets.token_urlsafe(12)}'
 
     userdata_dict = args.get('userdata', {})
     userdata = base64.b64encode(json.dumps(userdata_dict).encode()).decode()
