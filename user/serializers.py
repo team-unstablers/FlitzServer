@@ -103,6 +103,12 @@ class SelfUserIdentitySerializer(serializers.ModelSerializer):
         model = UserIdentity
         fields = ('gender', 'is_trans', 'display_trans_to_others', 'preferred_genders', 'welcomes_trans', 'trans_prefers_safe_match')
 
+class UserSetEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, allow_blank=False, allow_null=False)
+
+class UserVerifyEmailSerializer(serializers.Serializer):
+    verification_code = serializers.CharField(required=True, allow_blank=False, allow_null=False)
+
 class UserRegistrationSessionStartSerializer(serializers.Serializer):
     country_code = serializers.CharField(max_length=2, required=True)
     agree_marketing_notifications = serializers.BooleanField(required=True)

@@ -1,3 +1,4 @@
+import secrets
 from datetime import timedelta
 
 import jwt
@@ -10,9 +11,10 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext as t
 
 from rest_framework import permissions, viewsets, serializers, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, throttle_classes
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from twisted.words.im.basechat import Conversation
@@ -28,11 +30,12 @@ from user.registration import UserRegistrationContext
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer, \
     UserFlagSerializer, UserRegistrationSessionStartSerializer, UserRegistrationStartPhoneVerificationSerializer, \
-    UserRegistrationCompletePhoneVerificationSerializer
+    UserRegistrationCompletePhoneVerificationSerializer, UserSetEmailSerializer, UserVerifyEmailSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from flitz.tasks import post_slack_message
-from user.tasks import execute_deletion_phase
+from user.tasks import execute_deletion_phase, send_templated_email
+from user.throttling import UserEmailRateThrottle
 from user.verification.errors import AdultVerificationError
 from user.verification.logics import CompletePhoneVerificationArgs
 from user_auth.authentication import UserRegistrationSessionAuthentication
@@ -251,6 +254,100 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = PublicSelfUserSerializer(user)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['POST'], url_path='self/set-email', throttle_classes=[UserEmailRateThrottle])
+    def set_email(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        if f'fz:user_email_change:{user.id}' in cache:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.email_change_pending'
+            }, status=400)
+
+        serializer = UserSetEmailSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.invalid_email'
+            }, status=400)
+
+        validated_data = serializer.validated_data
+        email = validated_data['email']
+
+        if user.email == email:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.email_unchanged'
+            }, status=400)
+
+        if User.objects.filter(~Q(id=user.id), email=email).exists():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.email_in_use'
+            }, status=400)
+
+        verification_code = ''.join(secrets.choice('0123456789') for _ in range(6))
+
+        context = {
+            'email': email,
+            'verification_code': verification_code
+        }
+
+        cache.set(f'fz:user_email_change:{user.id}', context, timeout=(10 * 60)) # 10분 유효
+
+        send_templated_email.delay(
+            to=email,
+            subject=t("email.verify_request.title"),
+            template_name='verify_request',
+            ctx={
+                'username': user.display_name,
+                'verification_code': verification_code,
+            }
+        )
+
+        return Response({'is_success': True}, status=200)
+
+    @action(detail=False, methods=['POST'], url_path='self/set-email/verify')
+    def verify_email(self, request, *args, **kwargs):
+        user: User = self.request.user
+
+        serializer = UserVerifyEmailSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.invalid_verification_code'
+            }, status=400)
+
+        validated_data = serializer.validated_data
+        verification_code = validated_data['verification_code']
+
+        cached = cache.get(f'fz:user_email_change:{user.id}', None)
+        if cached is None or cached.get('verification_code', '') != verification_code:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.invalid_verification_code'
+            }, status=400)
+
+        email = cached.get('email')
+        if email is None:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.invalid_verification_code'
+            }, status=400)
+
+        if User.objects.filter(~Q(id=user.id), email=email).exists():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.user.email_in_use'
+            }, status=400)
+
+        user.email = email
+        user.save()
+
+        cache.delete(f'fz:user_email_change:{user.id}')
+
+        return Response({'is_success': True}, status=200)
+
     @action(detail=False, methods=['GET'], url_path=r'by-username/(?P<username>[a-zA-Z0-9_]+)')
     def get_by_username(self, request, username, *args, **kwargs):
         user = get_object_or_404(User, username=username)
@@ -396,6 +493,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             }, status=299)
 
         return Response({'is_success': True}, status=200)
+
 
     @action(detail=False, methods=['POST'], url_path='register/start', name='start_registration')
     def start_registration(self, request, *args, **kwargs):
