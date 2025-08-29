@@ -729,7 +729,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
         # 휴대폰 번호 중복 확인
         if User.objects.filter(
-            phone_number=payload['phone_number']
+            phone_number=response['phone_number']
         ).exists():
             # 헉, 이미 사용 중인 번호네?
             phone_number_duplicated = True
