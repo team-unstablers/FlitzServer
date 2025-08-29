@@ -54,7 +54,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_authenticators(self):
-        is_registration_endpoint = self.request.META['PATH_INFO'].startswith('/user/register/')
+        is_registration_endpoint = self.request.META['PATH_INFO'].startswith('/users/register/')
 
         if is_registration_endpoint:
             return [UserRegistrationSessionAuthentication()]
