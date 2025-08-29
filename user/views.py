@@ -17,7 +17,6 @@ from rest_framework import permissions, viewsets, serializers, status
 from rest_framework.decorators import action, throttle_classes
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from twisted.words.im.basechat import Conversation
 
 from card.models import CardDistribution, CardFavoriteItem
 from flitz.thumbgen import generate_thumbnail
