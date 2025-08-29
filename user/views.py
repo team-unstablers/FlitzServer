@@ -361,14 +361,14 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
         response, private_data = start_phone_verification({
             'country_code': payload['country_code'],
-            'phone_number': payload['phone_number']
+            'phone_number': payload.get('phone_number', None)
         })
 
         # set private data and update context
 
         context = {
             'country_code': payload['country_code'],
-            'phone_number': payload['phone_number'],
+            'phone_number': payload.get('phone_number', None),
 
             'private_data': private_data,
         }
@@ -672,7 +672,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
         response, private_data = start_phone_verification({
             'country_code': context.country_code,
-            'phone_number': payload['phone_number']
+            'phone_number': payload.get('phone_number', None)
         })
 
         # set private data and update context
