@@ -129,13 +129,13 @@ class UserRegistrationSessionStartSerializer(serializers.Serializer):
     turnstile_token = serializers.CharField(required=True, allow_null=False, allow_blank=False)
 
 class UserRegistrationStartPhoneVerificationSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    phone_number = serializers.CharField(allow_null=False, allow_blank=False)
 
 class UserRegistrationCompletePhoneVerificationSerializer(serializers.Serializer):
-    verification_code = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    verification_code = serializers.CharField(allow_null=True, allow_blank=False)
 
-    encrypted_payload = serializers.CharField(required=True, allow_null=True, allow_blank=False)
-    payload_hmac = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+    encrypted_payload = serializers.CharField(allow_null=True, allow_blank=False)
+    payload_hmac = serializers.CharField(allow_null=True, allow_blank=False)
 
 class UserRegistrationSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=24, allow_blank=False, allow_null=False)
