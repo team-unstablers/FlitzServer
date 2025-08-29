@@ -1,7 +1,12 @@
+from dataclasses import dataclass, asdict
 from typing import TypedDict, NotRequired, Optional
 
+from dacite import from_dict
+from django.core.cache import cache
 
-class UserRegistrationContext(TypedDict):
+
+@dataclass
+class UserRegistrationContext:
     session_id: str
 
     device_info: str
@@ -14,5 +19,27 @@ class UserRegistrationContext(TypedDict):
     phone_number: Optional[str]
 
     phone_number_duplicated: bool
+
+    @property
+    def is_authenticated(self) -> bool:
+        """
+        DRF 호환용
+        """
+        return True
+
+    @staticmethod
+    def load(session_id: str) -> Optional["UserRegistrationContext"]:
+        data = cache.get(f"fz:user_registration:{session_id}")
+        if data is None:
+            return None
+
+        return from_dict(UserRegistrationContext, data)
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+    def save(self):
+        cache.set(f"fz:user_registration:{self.session_id}", self.as_dict(), timeout=15 * 30)
+
 
 

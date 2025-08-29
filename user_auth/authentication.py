@@ -76,7 +76,7 @@ class UserRegistrationSessionAuthentication(authentication.BaseAuthentication):
             if not ('--with-love' in token_options and '--registration' in token_options):
                 return None
 
-            context: UserRegistrationContext = cache.get(f'fz:user_registration:{session_id}')
+            context = UserRegistrationContext.load(session_id)
 
             if context is None:
                 return None

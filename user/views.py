@@ -642,7 +642,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             phone_number_duplicated=False,
         )
 
-        cache.set(f'fz:user_registration:{session_id}', context, timeout=(30 * 60))
+        context.save()
 
         token = jwt.encode({
             'sub': session_id,
@@ -671,13 +671,13 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         from user.verification.logics import start_phone_verification
 
         response, private_data = start_phone_verification({
-            'country_code': context['country_code'],
+            'country_code': context.country_code,
             'phone_number': payload['phone_number']
         })
 
         # set private data and update context
-        context['phone_verification_state'] = private_data
-        cache.set(f'fz:user_registration:{context["session_id"]}', context, timeout=(30 * 60))
+        context.phone_verification_state = private_data
+        context.save()
 
         return Response({
             'is_success': True,
@@ -698,20 +698,20 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         payload = serializer.validated_data
 
         args: CompletePhoneVerificationArgs = {
-            'country_code': context['country_code'],
+            'country_code': context.country_code,
 
             **payload
         }
 
         from user.verification.logics import complete_phone_verification
-        private_data = context.get('phone_verification_state', None)
+        private_data = context.phone_verification_state
 
         try:
             response = complete_phone_verification(args, private_data)
         except AdultVerificationError:
             # 성인 인증 실패 - 회원가입을 중단하고 세션을 삭제한다
 
-            cache.delete(f'fz:user_registration:{context["session_id"]}')
+            cache.delete(f'fz:user_registration:{context.session_id}')
 
             return Response({
                 'is_success': False,
@@ -734,11 +734,11 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             # 헉, 이미 사용 중인 번호네?
             phone_number_duplicated = True
 
-        context['phone_number'] = response['phone_number']
-        context['phone_verification_state'] = None
-        context['phone_number_duplicated'] = phone_number_duplicated
+        context.phone_number = response['phone_number']
+        context.phone_verification_state = None
+        context.phone_number_duplicated = phone_number_duplicated
 
-        cache.set(f'fz:user_registration:{context["session_id"]}', context, timeout=(30 * 60))
+        context.save()
 
         if phone_number_duplicated:
             # 일단은 성공으로 응답하되, 추가 메시지를 보낸다
@@ -757,7 +757,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     def complete_registration(self, request, *args, **kwargs):
         context: UserRegistrationContext = request.user
 
-        if context.get('phone_number', None) is None:
+        if context.phone_number is None:
             return Response({
                 'is_success': False,
                 'reason': 'fz.auth.phone_not_verified'
@@ -775,7 +775,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         validated_data = serializer.validated_data
 
         with transaction.atomic():
-            if context['phone_number_duplicated']:
+            if context.phone_number_duplicated:
                 if validated_data['force_use_phone_number']:
                     # 휴대폰 번호가 충돌 났음에도 불구하고 신규 사용자가 가입을 원하므로,
                     # 기존 사용자의 휴대폰 번호를 지운다
@@ -783,7 +783,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
                     # TODO: 이 부분은 추후에 휴대폰 번호 변경 기능이 생기면, 변경 기능에도 동일하게 적용해야 함
                     # TODO: 기존 사용자에겐 휴대폰 번호를 다시 인증 받기 전까진 앱을 사용할 수 없도록 해야 함
                     User.objects.filter(
-                        phone_number=context['phone_number']
+                        phone_number=context.phone_number
                     ).update(
                         phone_number=None
                     )
@@ -804,8 +804,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             user.bio = validated_data['bio']
             user.hashtags = validated_data['hashtags']
 
-            user.country = context['country_code']
-            user.set_phone_number(context['phone_number'])
+            user.country = context.country_code
+            user.set_phone_number(context.phone_number)
 
             user.is_active = True
             user.save()
@@ -814,17 +814,17 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             UserSettings.objects.update_or_create(
                 user=user,
                 defaults={
-                    'marketing_notifications_enabled': context['agree_marketing_notifications'],
-                    'marketing_notifications_enabled_at': timezone.now() if context['agree_marketing_notifications'] else None,
+                    'marketing_notifications_enabled': context.agree_marketing_notifications,
+                    'marketing_notifications_enabled_at': timezone.now() if context.agree_marketing_notifications else None,
                 }
             )
 
             # create session
             session = UserSession.objects.create(
                 user=user,
-                description=context['device_info'],
+                description=context.device_info,
                 initiated_from=request.META.get('REMOTE_ADDR'),
-                apns_token=context['apns_token'] if context['apns_token'] else None,
+                apns_token=context.apns_token if context.apns_token else None,
             )
 
             user.primary_session = session
@@ -835,7 +835,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             refresh_token = session.update_refresh_token()
 
             # clear registration session
-            cache.delete(f'fz:user_registration:{context["session_id"]}')
+            cache.delete(f'fz:user_registration:{context.session_id}')
 
         return Response({
             'token': token,
