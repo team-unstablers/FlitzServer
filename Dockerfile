@@ -39,4 +39,4 @@ ARG GIT_COMMIT=unknown
 ENV FLITZ_GIT_COMMIT=${GIT_COMMIT}
 
 # run server
-CMD ["poetry", "run", "daphne", "-b", "0.0.0.0", "-p", "8000", "flitz.asgi:application"]
+CMD ["poetry", "run", "daphne", "-b", "0.0.0.0", "-p", "8000", "--proxy-headers", "flitz.asgi:application"]
