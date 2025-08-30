@@ -33,6 +33,7 @@ STORAGES = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
             "bucket_name": os.environ.get('FLITZ_STATIC_BUCKET_NAME'),
+            "endpoint_url": os.environ.get('FLITZ_S3_ENDPOINT_URL'),
             "access_key": os.environ.get('FLITZ_S3_ACCESS_KEY_ID'),
             "secret_key": os.environ.get('FLITZ_S3_SECRET_ACCESS_KEY'),
             "region_name": os.environ.get('FLITZ_S3_REGION_NAME'),
@@ -42,6 +43,7 @@ STORAGES = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
             "bucket_name": os.environ.get('FLITZ_CONTENT_BUCKET_NAME'),
+            "endpoint_url": os.environ.get('FLITZ_S3_ENDPOINT_URL'),
             "access_key": os.environ.get('FLITZ_S3_ACCESS_KEY_ID'),
             "secret_key": os.environ.get('FLITZ_S3_SECRET_ACCESS_KEY'),
             "region_name": os.environ.get('FLITZ_S3_REGION_NAME'),
@@ -66,7 +68,9 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(os.environ.get('FLITZ_REDIS_CHANNEL_HOST'), 6380)],
+            'hosts': [{
+                'address': os.environ.get('FLITZ_REDIS_CHANNEL_LAYER_URL'),
+            }],
             'capacity': 1500,
             'expiry': 10,
         },

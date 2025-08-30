@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
-    && curl -sSL https://install.python-poetry.org | python3 - --version 2.1.3 \
+    && curl -sSL https://install.python-poetry.org | python3 - --version 1.8.4 \
     && ln -s /opt/poetry/bin/poetry /usr/local/bin/poetry \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
