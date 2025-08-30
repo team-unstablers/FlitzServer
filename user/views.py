@@ -1005,7 +1005,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
                 # 헉 그럴리가 없는데...
                 raise Exception("User not found during password reset")
 
-            user.set_password(data['password'])
+            user.set_password(data['new_password'])
             user.save()
 
         cache.delete(f'fz:reset_password:{session_id}')
