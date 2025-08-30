@@ -13,3 +13,4 @@ class DeletedUserArchiveData(TypedDict):
     display_name: Optional[str]
     email: Optional[str]
     phone_number: Optional[str]
+    nice_di: Optional[str]

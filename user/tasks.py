@@ -204,6 +204,7 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
         display_name=user.display_name,
         email=user.email,
         phone_number=user.phone_number,
+        nice_di=user.nice_di,
     )
 
     try:
@@ -272,6 +273,8 @@ def execute_deletion_phase_sensitive_data(user_id: UUID):
     user.display_name = f'__DELETED__'
     user.phone_number = None
     user.phone_number_hashed = None
+
+    user.nice_di = None
 
     if user.profile_image.name:
         # TODO: 프로필 이미지 삭제는 나중에 아카이브로 옮겨야 할까요?
