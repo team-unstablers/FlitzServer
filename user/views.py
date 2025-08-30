@@ -637,6 +637,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
             phone_verification_state=None,
             phone_number=None,
+            phone_verification_additional_data=None,
 
             phone_number_duplicated=False,
         )
@@ -732,6 +733,26 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         ).exists():
             # 헉, 이미 사용 중인 번호네?
             phone_number_duplicated = True
+
+        additional_data = response.get('additional_data', {})
+        nice_di = additional_data.get('di', None)
+
+        if nice_di:
+            # 대한민국: NICE DI 중복 확인
+            # DI (Duplication Information) - 본인 확인 기관에서 발급하는 중복 가입 방지용 식별자
+            # 개인이 여러 회선의 휴대폰으로 여러 계정을 만드는 것을 방지하기 위해 사용
+
+            if User.objects.filter(
+                nice_di=nice_di
+            ).only('id').exists():
+                # 이미 회원 가입된 DI임 -- 회원 강비 중단
+
+                cache.delete(f'fz:user_registration:{context.session_id}')
+
+                return Response({
+                    'is_success': True,
+                    'additional_message': 'fz.auth.identity_duplicated'
+                }, status=200)
 
         context.phone_number = response['phone_number']
         context.phone_verification_additional_data = response.get('additional_data', {})
