@@ -1,23 +1,15 @@
 """
 Development environment settings for Flitz project.
 """
-from dotenv import load_dotenv
-load_dotenv('.env.development')
-
 from .settings_base import *
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9@s8#wqep7zu^ksyb0$mq#zw)zxjng+(2108!+=z(y1h-*v9wj'
+SECRET_KEY = os.environ.get('FLITZ_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-DEVELOPMENT_MODE = True
+DEBUG = False
+DEVELOPMENT_MODE = False
 
 ALLOWED_HOSTS = ['*']
-
-# Development specific settings
-LOCALHOST = os.environ.get('FLITZ_HOSTNAME', 'cheese-mbpr14.local')
 
 # Database for development
 DATABASES = {
@@ -36,41 +28,45 @@ REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
     'drf_orjson_renderer.renderers.ORJSONRenderer',
 ]
 
-# Storage settings for development (MinIO)
 STORAGES = {
     "staticfiles": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
-            "bucket_name": "flitz-server-static",
-            "access_key": "flitzdev",
-            "secret_key": "flitzdev123",
-            "endpoint_url": f"http://{LOCALHOST}:9000"
+            "bucket_name": os.environ.get('FLITZ_STATIC_BUCKET_NAME'),
+            "access_key": os.environ.get('FLITZ_S3_ACCESS_KEY_ID'),
+            "secret_key": os.environ.get('FLITZ_S3_SECRET_ACCESS_KEY'),
+            "region_name": os.environ.get('FLITZ_S3_REGION_NAME'),
         }
     },
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
-            "bucket_name": "flitz",
-            "access_key": "flitzdev",
-            "secret_key": "flitzdev123",
-            "endpoint_url": f"http://{LOCALHOST}:9000",
-            "object_parameters": {
-                "ACL": "public-read"
-            },
+            "bucket_name": os.environ.get('FLITZ_CONTENT_BUCKET_NAME'),
+            "access_key": os.environ.get('FLITZ_S3_ACCESS_KEY_ID'),
+            "secret_key": os.environ.get('FLITZ_S3_SECRET_ACCESS_KEY'),
+            "region_name": os.environ.get('FLITZ_S3_REGION_NAME'),
         }
+    }
+
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('FLITZ_REDIS_CACHE_URL'),
     }
 }
 
 # Celery Configuration for development
-CELERY_BROKER_URL = 'redis://localhost:6380/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6380/0'
+CELERY_BROKER_URL = os.environ.get('FLITZ_REDIS_CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.environ.get('FLITZ_REDIS_CELERY_BACKEND_URL')
 
 # Channel Layers for development
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 6380)],
+            'hosts': [(os.environ.get('FLITZ_REDIS_CHANNEL_HOST'), 6380)],
             'capacity': 1500,
             'expiry': 10,
         },
@@ -80,6 +76,6 @@ CHANNEL_LAYERS = {
 # APNS Configuration for development
 APNS_USE_SANDBOX = True
 
-PHONE_NUMBER_HASH_SALT = 'd634]Asp+,!a?pzbp*V2LM4x%qDmbE#.'
+PHONE_NUMBER_HASH_SALT = os.environ.get('FLITZ_PHONE_NUMBER_HASH_SALT')
 
 GPG_PUBLIC_KEY_FILE = 'flitz-dev.public.asc'

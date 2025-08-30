@@ -69,12 +69,12 @@ urlpatterns = [
     path('', include(router.urls)),
     path('auth/token', csrf_exempt(request_token)),
     path('auth/token/refresh', csrf_exempt(refresh_token_view)),
-    path('admin/', admin.site.urls),
 ]
 
 if settings.DEBUG:
     urlpatterns += [
         # API Documentation (only in DEBUG mode)
+        path('admin/', admin.site.urls),
         path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
         path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
         path('swagger.yaml', schema_view.without_ui(cache_timeout=0), name='schema-json'),
