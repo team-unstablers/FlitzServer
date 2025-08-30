@@ -277,6 +277,6 @@ class ResetPasswordConfirmSerializer(serializers.Serializer):
     """
 
     session_id = serializers.CharField(required=True, allow_null=False, allow_blank=False)
-    validation_code = serializers.CharField(required=True, allow_null=False, allow_blank=False)
+    verification_code = serializers.CharField(required=True, allow_null=False, allow_blank=False)
 
     new_password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
