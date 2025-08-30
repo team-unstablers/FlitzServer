@@ -21,16 +21,19 @@ from rest_framework.exceptions import ValidationError
 from card.models import CardDistribution, CardFavoriteItem
 from flitz.thumbgen import generate_thumbnail
 from flitz.turnstile import validate_turnstile
+from flitz.utils.aligo_sms import AligoSMS
 from messaging.models import DirectMessageConversation
 from safety.models import UserWaveSafetyZone, UserBlock
 from safety.serializers import UserWaveSafetyZoneSerializer
+from safety.utils.phone_number import normalize_phone_number, to_local_phone_number
 from user.models import User, UserIdentity, UserMatch, UserSettings, UserDeletionPhase, UserDeletionFeedback, UserFlag
 from user.registration import UserRegistrationContext
 from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, SelfUserIdentitySerializer, \
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer, \
     UserFlagSerializer, UserRegistrationSessionStartSerializer, UserRegistrationStartPhoneVerificationSerializer, \
     UserRegistrationCompletePhoneVerificationSerializer, UserSetEmailSerializer, UserVerifyEmailSerializer, \
-    UserStartPhoneVerificationSerializer, UserCompletePhoneVerificationSerializer, UsernameAvailabilitySerializer
+    UserStartPhoneVerificationSerializer, UserCompletePhoneVerificationSerializer, UsernameAvailabilitySerializer, \
+    ResetPasswordRequestSerializer, ResetPasswordConfirmSerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from flitz.tasks import post_slack_message
@@ -47,7 +50,13 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PublicUserSerializer
 
     def get_permissions(self):
-        if self.action == 'start_registration':
+        public_actions = [
+            'start_registration',
+            'reset_password_request',
+            'reset_password_confirm'
+        ]
+
+        if self.action in public_actions:
             return [permissions.AllowAny()]
 
         return [permissions.IsAuthenticated()]
@@ -798,7 +807,6 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             'is_success': True,
         }, status=200)
 
-
     @action(detail=False, methods=['POST'], url_path='register/complete', url_name='complete_registration')
     def complete_registration(self, request, *args, **kwargs):
         context: UserRegistrationContext = request.user
@@ -894,3 +902,116 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             'token': token,
             'refresh_token': refresh_token
         }, status=201)
+
+    @action(detail=False, methods=['POST'], url_path='reset-password', url_name='reset_password_request')
+    def reset_password_request(self, request, *args, **kwargs):
+        serializer = ResetPasswordRequestSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.invalid_request'
+            }, status=400)
+
+        data = serializer.validated_data
+
+        normalized_phone_number = normalize_phone_number(data['phone_number'], data['country_code'])
+
+        user = User.objects.filter(
+            username=data['username'],
+            phone_number=normalized_phone_number
+        ).first()
+
+        session_id = str(uuid7())
+
+        if user:
+            aligo = AligoSMS.shared()
+            validation_code = ''.join(secrets.choice('0123456789') for _ in range(6))
+
+            if user.country != 'KR':
+                # Flitz 서비스는 아직 대한민국 외의 국가에서 서비스하지 않음
+                # TODO: report to setnry
+                return Response({
+                    'is_success': False,
+                    'reason': 'fz.auth.unsupported_operation'
+                }, status=400)
+
+            local_phone_number = to_local_phone_number(user.phone_number, user.country)
+
+            context = {
+                'user_id': user.id,
+                'validation_code': validation_code,
+                'failure_count': 0,
+            }
+
+            cache.set(f'fz:reset_password:{session_id}', context, timeout=5*60) # 5분 유효
+
+            aligo.send_lms(to=local_phone_number,
+                           title='[Flitz] 비밀번호 변경을 위한 인증 코드 발송',
+                           message=f'안녕하세요, Flitz입니다.\n회원님의 비밀번호 변경을 위한 인증 코드는 {validation_code}입니다.\n감사합니다.\n\n※ 이 코드는 5분간 유효합니다.\n※ Flitz 서비스 운영 주체인 (주)팀언스테이블러즈의 공식 연락처인 070-8824-1337의 문자 자동 발송 허가를 위한 준비를 하고 있습니다. 이에 따라 부득이하게 회사 대표자의 개인 번호를 통해 발송하고 있습니다. 양해 바랍니다.\n※ 이 번호는 개인 번호이므로 별도 연락은 삼가 주시기 바랍니다.')
+
+        return Response({
+            'is_success': True,
+            'additional_data': {
+                'session_id': session_id
+            }
+        }, status=200)
+
+
+    @action(detail=False, methods=['POST'], url_path='reset-password/confirm', url_name='reset_password_confirm')
+    def reset_password_confirm(self, request, *args, **kwargs):
+        serializer = ResetPasswordConfirmSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.invalid_request'
+            }, status=400)
+
+        data = serializer.validated_data
+        session_id = data['session_id']
+
+        if not (f'fz:reset_password:{session_id}' in cache):
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.session_expired'
+            }, status=400)
+
+        context = cache.get(f'fz:reset_password:{session_id}')
+
+        if context['validation_code'] != data['validation_code']:
+            context['failure_count'] = context.get('failure_count', 0) + 1
+
+            if context['failure_count'] >= 3:
+                # 너무 많이 틀림 - 세션 삭제
+                cache.delete(f'fz:reset_password:{session_id}')
+                return Response({
+                    'is_success': False,
+                    'reason': 'fz.auth.session_expired'
+                }, status=400)
+
+            # 실패 횟수만 갱신
+            cache.set(f'fz:reset_password:{session_id}', context, timeout=5*60)
+
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.invalid_validation_code'
+            }, status=400)
+
+        # 인증 성공 - 비밀번호 변경 가능 상태로 갱신
+        with transaction.atomic():
+            user = User.objects.filter(id=context['user_id']).first()
+            if not user:
+                # 헉 그럴리가 없는데...
+                raise Exception("User not found during password reset")
+
+            user.set_password(data['password'])
+            user.save()
+
+        cache.delete(f'fz:reset_password:{session_id}')
+
+        return Response({
+            'is_success': True,
+        }, status=200)
+
+

@@ -261,3 +261,22 @@ class UsernameAvailabilitySerializer(serializers.Serializer):
     """
 
     username = serializers.CharField(max_length=20, allow_blank=False, allow_null=False)
+
+class ResetPasswordRequestSerializer(serializers.Serializer):
+    """
+    비밀번호 재설정 요청을 위한 serializer
+    """
+
+    username = serializers.CharField(max_length=24, allow_blank=False, allow_null=False)
+    country_code = serializers.CharField(max_length=2, required=True)
+    phone_number = serializers.CharField(required=True, allow_null=True, allow_blank=False)
+
+class ResetPasswordConfirmSerializer(serializers.Serializer):
+    """
+    비밀번호 재설정 확인을 위한 serializer
+    """
+
+    session_id = serializers.CharField(required=True, allow_null=False, allow_blank=False)
+    validation_code = serializers.CharField(required=True, allow_null=False, allow_blank=False)
+
+    new_password = serializers.CharField(max_length=128, allow_blank=False, allow_null=False)
