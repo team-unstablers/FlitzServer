@@ -74,7 +74,7 @@ class NiceAuthResponse(TypedDict):
     nationalinfo: NotRequired[Literal['0', '1']]
     mobileco: NotRequired[str]
     mobileno: NotRequired[str]
-    ci: NotRequired[str]
+    di: NotRequired[str]
     receivedata: str
 
 class NiceEasyContext(TypedDict):

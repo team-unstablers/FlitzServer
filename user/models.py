@@ -75,7 +75,16 @@ FuzzyDistance = Literal['nearest', 'near', 'medium', 'far', 'farthest']
 class User(AbstractUser):
     class Meta:
         indexes = [
-            models.Index(fields=['username'])
+            models.Index(fields=['username']),
+            models.Index(fields=['country']),
+            models.Index(fields=['phone_number_hashed']),
+
+            models.Index(fields=['nice_di']),
+
+            models.Index(fields=['disabled_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
         ]
 
     id = UUIDv7Field(primary_key=True, editable=False)
@@ -84,6 +93,7 @@ class User(AbstractUser):
     display_name = models.CharField(max_length=24)
 
     country = models.CharField(max_length=2, null=True, blank=True)
+    nice_di = models.CharField(max_length=64, null=True, blank=True)
 
     phone_number = models.CharField(max_length=32, null=True, blank=True)
     phone_number_hashed = models.CharField(max_length=64, null=True, blank=True)

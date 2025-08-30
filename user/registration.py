@@ -17,6 +17,7 @@ class UserRegistrationContext:
 
     phone_verification_state: Optional[dict]
     phone_number: Optional[str]
+    phone_verification_additional_data: Optional[dict]
 
     phone_number_duplicated: bool
 

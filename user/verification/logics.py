@@ -149,7 +149,7 @@ def complete_phone_verification_kr(args: CompletePhoneVerificationArgs, private_
 
     phone_number_raw = response['mobileno']
     birth_date_raw = response.get('birthdate')
-    ci = response.get('ci')
+    di = response.get('di')
 
     # parse date (YYYYMMDD -> date)
     year = int(birth_date_raw[0:4])
@@ -168,6 +168,6 @@ def complete_phone_verification_kr(args: CompletePhoneVerificationArgs, private_
         'phone_number': phone_number,
         'additional_data': {
             'birth_date': birth_date,
-            'ci': ci,
+            'di': di,
         }
     }

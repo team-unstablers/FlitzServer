@@ -734,6 +734,8 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             phone_number_duplicated = True
 
         context.phone_number = response['phone_number']
+        context.phone_verification_additional_data = response.get('additional_data', {})
+
         context.phone_verification_state = None
         context.phone_number_duplicated = phone_number_duplicated
 
@@ -826,6 +828,13 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             user.title = validated_data['title']
             user.bio = validated_data['bio']
             user.hashtags = validated_data['hashtags']
+
+            if context.phone_verification_additional_data:
+                additional_data = context.phone_verification_additional_data
+                if 'birth_date' in additional_data:
+                    user.birth_date = additional_data['birth_date']
+                if 'di' in additional_data:
+                    user.nice_di = additional_data['di']
 
             user.country = context.country_code
             user.set_phone_number(context.phone_number)
