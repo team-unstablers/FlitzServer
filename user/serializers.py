@@ -254,3 +254,10 @@ class UserFlagSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFlag
         fields = ('reason', 'user_description')
+
+class UsernameAvailabilitySerializer(serializers.Serializer):
+    """
+    사용자 이름 중복 확인을 위한 serializer
+    """
+
+    username = serializers.CharField(max_length=20, allow_blank=False, allow_null=False)

@@ -30,7 +30,7 @@ from user.serializers import PublicUserSerializer, PublicSelfUserSerializer, Sel
     UserRegistrationSerializer, UserSettingsSerializer, UserPasswdSerializer, UserDeactivationSerializer, \
     UserFlagSerializer, UserRegistrationSessionStartSerializer, UserRegistrationStartPhoneVerificationSerializer, \
     UserRegistrationCompletePhoneVerificationSerializer, UserSetEmailSerializer, UserVerifyEmailSerializer, \
-    UserStartPhoneVerificationSerializer, UserCompletePhoneVerificationSerializer
+    UserStartPhoneVerificationSerializer, UserCompletePhoneVerificationSerializer, UsernameAvailabilitySerializer
 
 from flitz.exceptions import UnsupportedOperationException
 from flitz.tasks import post_slack_message
@@ -746,6 +746,30 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
                 'is_success': True,
                 'additional_message': 'fz.auth.phone_number_duplicated'
             }, status=200)
+
+        return Response({
+            'is_success': True,
+        }, status=200)
+
+
+    @action(detail=False, methods=['POST'], url_path='register/username-availability')
+    def registration_check_username_availability(self, request, *args, **kwargs):
+        serializer = UsernameAvailabilitySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.username_not_available'
+            }, status=400)
+
+        existence = User.objects.filter(
+            username=serializer.validated_data['username']
+        ).only('id').exists()
+
+        if existence:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.auth.username_not_available'
+            }, status=400)
 
         return Response({
             'is_success': True,
