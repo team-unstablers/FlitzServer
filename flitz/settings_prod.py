@@ -78,7 +78,7 @@ CHANNEL_LAYERS = {
 }
 
 # APNS Configuration for development
-APNS_USE_SANDBOX = True
+APNS_USE_SANDBOX = False
 
 PHONE_NUMBER_HASH_SALT = os.environ.get('FLITZ_PHONE_NUMBER_HASH_SALT')
 
