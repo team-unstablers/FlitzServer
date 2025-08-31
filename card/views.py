@@ -135,6 +135,14 @@ class PublicCardViewSet(viewsets.ModelViewSet):
         return queryset
 
     def create(self, request: Request, *args, **kwargs):
+        card_count = self.get_queryset().filter(user=request.user).only('id').count()
+
+        if card_count >= 4:
+            return Response({
+                'is_success': False,
+                'reason': 'fz.card.limit_exceeded'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         card_obj = CardObject.create_empty(version=CardSchemaVersion.V1)
 
         card = Card.objects.create(
