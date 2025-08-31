@@ -85,7 +85,7 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     online_status = serializers.CharField(read_only=True)
     fuzzy_distance = serializers.SerializerMethodField()
 
-    main_card_id = serializers.CharField(source='main_card_id', read_only=True, allow_null=True)
+    main_card_id = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = User
