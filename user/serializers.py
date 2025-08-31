@@ -85,10 +85,12 @@ class PublicSelfUserSerializer(serializers.ModelSerializer):
     online_status = serializers.CharField(read_only=True)
     fuzzy_distance = serializers.SerializerMethodField()
 
+    main_card_id = serializers.CharField(source='main_card_id', read_only=True, allow_null=True)
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins')
-        read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins')
+        fields = ('id', 'email', 'username', 'display_name', 'title', 'bio', 'hashtags', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins', 'main_card_id')
+        read_only_fields = ('id', 'email', 'username', 'birth_date', 'phone_number', 'profile_image_url', 'online_status', 'fuzzy_distance', 'free_coins', 'paid_coins', 'main_card_id')
 
     def get_fuzzy_distance(self, obj: User):
         # 자기 자신은 가장 가까운 거리로 표시
