@@ -898,6 +898,10 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
             # clear registration session
             cache.delete(f'fz:user_registration:{context.session_id}')
 
+            from safety.tasks import reverse_evaluate_block_triggers
+            # 차단 트리거 재평가 (연락처 동기화 등을 통한 차단)
+            reverse_evaluate_block_triggers.delay_on_commit(user.id)
+
         return Response({
             'token': token,
             'refresh_token': refresh_token
