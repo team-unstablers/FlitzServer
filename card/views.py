@@ -143,13 +143,20 @@ class PublicCardViewSet(viewsets.ModelViewSet):
                 'reason': 'fz.card.limit_exceeded'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        card_obj = CardObject.create_empty(version=CardSchemaVersion.V1)
+        with transaction.atomic():
+            user = request.user
 
-        card = Card.objects.create(
-            user=self.request.user,
-            title='',
-            content=card_obj.as_dict()
-        )
+            card_obj = CardObject.create_empty(version=CardSchemaVersion.V1)
+
+            card = Card.objects.create(
+                user=self.request.user,
+                title='',
+                content=card_obj.as_dict()
+            )
+
+            if user.main_card is None:
+                user.main_card = card
+                user.save()
 
         serializer = PublicCardSerializer(card)
 
