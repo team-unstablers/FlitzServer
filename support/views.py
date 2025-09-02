@@ -18,6 +18,24 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
 
         return SupportTicketSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({
+                'is_success': False,
+                'reason': 'fz.validation_error',
+            }, status=400)
+
+        data = serializer.validated_data
+        ticket = SupportTicket.objects.create(
+            user=request.user,
+            title=data['title'],
+            content=data['content']
+        )
+
+        return Response(SupportTicketSerializer(ticket).data, status=201)
+
     def get_queryset(self):
         return SupportTicket.objects.filter(user=self.request.user).order_by('-created_at')
 
