@@ -952,7 +952,7 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
 
             aligo.send_lms(to=local_phone_number,
                            title='[Flitz] 비밀번호 변경을 위한 인증 코드 발송',
-                           message=f'안녕하세요, Flitz입니다.\n회원님의 비밀번호 변경을 위한 인증 코드는 {verification_code}입니다.\n감사합니다.\n\n※ 이 코드는 5분간 유효합니다.\n※ Flitz 서비스 운영 주체인 (주)팀언스테이블러즈의 공식 연락처인 070-8824-1337의 문자 자동 발송 허가를 위한 준비를 하고 있습니다. 이에 따라 부득이하게 회사 대표자의 개인 번호를 통해 발송하고 있습니다. 양해 바랍니다.\n※ 이 번호는 개인 번호이므로 별도 연락은 삼가 주시기 바랍니다.')
+                           message=f'안녕하세요, Flitz입니다.\n회원님의 비밀번호 변경을 위한 인증 코드는 {verification_code}입니다.\n감사합니다.\n\n※ 이 코드는 5분간 유효합니다.')
 
         return Response({
             'is_success': True,

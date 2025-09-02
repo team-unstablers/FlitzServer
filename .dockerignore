@@ -10,6 +10,9 @@ flitz-devenv
 
 flitz-dev.private.asc
 flitz-dev.public.asc
+
+flitz-prod.private.asc
+
 README.md
 
 db.sqlite3

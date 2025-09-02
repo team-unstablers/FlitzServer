@@ -82,4 +82,4 @@ APNS_USE_SANDBOX = False
 
 PHONE_NUMBER_HASH_SALT = os.environ.get('FLITZ_PHONE_NUMBER_HASH_SALT')
 
-GPG_PUBLIC_KEY_FILE = 'flitz-dev.public.asc'
+GPG_PUBLIC_KEY_FILE = 'flitz-prod.public.asc'
