@@ -42,14 +42,21 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         return Response({ 'is_success': False, 'reason': 'fz.method_not_allowed' }, status=405)
 
-    @action(detail=True, methods=['get'], url_path='responses', url_name='responses')
+    @action(detail=True, methods=['GET', 'POST'], url_path='responses', url_name='responses')
+    def dispatch_responses(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            return self.responses(request, *args, **kwargs)
+        elif request.method == 'POST':
+            return self.add_response(request, *args, **kwargs)
+        else:
+            return Response({ 'is_success': False, 'reason': 'fz.method_not_allowed' }, status=405)
+
     def responses(self, request, pk=None):
         ticket = self.get_object()
         responses = ticket.responses.all().order_by('created_at')
         serializer = SupportTicketResponseSerializer(responses, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], url_path='responses', url_name='response')
     def add_response(self, request, pk=None):
         ticket = self.get_object()
         serializer = SupportTicketResponseCreateSerializer(data=request.data)
