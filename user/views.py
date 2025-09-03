@@ -9,6 +9,7 @@ from uuid_v7.base import uuid7
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.db.models import Q
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext as t
@@ -45,6 +46,9 @@ from user_auth.authentication import UserRegistrationSessionAuthentication
 from user_auth.models import UserSession
 
 # Create your views here.
+
+def loveppears_404(request: HttpRequest, exception) -> HttpResponse:
+    return render(request, 'loveppears_404.html')
 
 class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PublicUserSerializer

@@ -47,6 +47,8 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+handler404 = 'user.views.loveppears_404'
+
 router = routers.SimpleRouter()
 
 router.register(r'users', PublicUserViewSet, basename='User')
