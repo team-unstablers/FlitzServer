@@ -48,7 +48,7 @@ from user_auth.models import UserSession
 # Create your views here.
 
 def loveppears_404(request: HttpRequest, exception) -> HttpResponse:
-    return render(request, 'loveppears_404.html')
+    return render(request, 'loveppears_404.html', status=404)
 
 class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PublicUserSerializer
