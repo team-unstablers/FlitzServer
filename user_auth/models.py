@@ -46,7 +46,7 @@ class UserSession(BaseModel):
         token = jwt.encode({
             'sub': str(self.id),
             'iat': now,
-            'exp': now + timedelta(hours=1),
+            'exp': now + timedelta(days=3),
             'x-flitz-options': '--with-love',
         }, key=settings.SECRET_KEY, algorithm='HS256')
 
