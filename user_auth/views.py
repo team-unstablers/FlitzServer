@@ -102,8 +102,9 @@ def refresh_token_view(request: HttpRequest):
             return HttpResponse(status=401)
 
         session_id = jwt_payload['sub']
+
+        # refresh_token=refresh_token,
         session: UserSession = (UserSession.objects.filter(id=session_id,
-                                                           refresh_token=refresh_token,
                                                            invalidated_at__isnull=True,
                                                            user__disabled_at__isnull=True)
                                 .select_related('user', 'user__location')
