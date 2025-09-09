@@ -40,7 +40,7 @@ class UserRegistrationContext:
         return asdict(self)
 
     def save(self):
-        cache.set(f"fz:user_registration:{self.session_id}", self.as_dict(), timeout=15 * 30)
+        cache.set(f"fz:user_registration:{self.session_id}", self.as_dict(), timeout=20 * 60)
 
 
 
