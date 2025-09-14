@@ -112,7 +112,7 @@ def refresh_token_view(request: HttpRequest):
                                 .first())
 
         if session is None:
-            return HttpResponse(status=401)
+            return HttpResponse(status=481)
 
         token = session.create_token()
         new_refresh_token = session.update_refresh_token()
