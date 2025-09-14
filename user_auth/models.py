@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
 
 import jwt
 
@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from flitz.models import BaseModel
-from flitz.apns import APNS
+from flitz.apns import APNS, APSPayload
 
 from user.models import User
 
@@ -39,6 +39,21 @@ class UserSession(BaseModel):
 
         apns = APNS.default()
         apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
+
+    def send_push_message_ex(self,
+                             aps: APSPayload,
+                             user_info: dict = None):
+        """
+        사용자에게 푸시 메시지를 보냅니다.
+        """
+
+        apns = APNS.default()
+        apns.send_notification_ex(
+            aps,
+            [self.apns_token],
+            user_info=user_info
+        )
+
 
     def create_token(self) -> str:
         now = timezone.now()

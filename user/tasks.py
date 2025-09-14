@@ -1,6 +1,6 @@
 import json
 from logging import Logger
-from typing import Optional
+from typing import Optional, List
 
 from uuid import UUID
 from celery import shared_task
@@ -14,7 +14,7 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 
-from flitz.apns import APNS
+from flitz.apns import APNS, APSPayload
 from flitz.gpgenc import gpg_encrypt
 from flitz.utils.mailgun import send_email
 from user.models import User, PushNotificationType, UserIdentity, UserGenderBit, UserDeletionPhase, \
@@ -28,6 +28,15 @@ logger: Logger = get_task_logger(__name__)
 def send_push_message(user_id: UUID, type: PushNotificationType, title: str, body: str, data: Optional[dict]=None, thread_id: Optional[str]=None, mutable_content: bool=False, sound: Optional[str]=None):
     user = User.objects.get(id=user_id)
     user.send_push_message(type, title, body, data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
+
+@shared_task
+def send_push_message_ex(user_id: UUID,
+                         type: PushNotificationType,
+                         aps: APSPayload,
+                         user_info: Optional[dict] = None):
+
+    user = User.objects.get(id=user_id)
+    user.send_push_message_ex(type, aps, user_info=user_info)
 
 @shared_task
 def send_templated_email(to: str, subject: str, template_name: str, ctx: dict):

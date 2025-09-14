@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, TypedDict, NotRequired
 
 import os
 
@@ -125,6 +125,24 @@ class MockedAPNS:
         logger.info(f"[MOCKED] Would send {push_type} push notification: {payload} to {device_tokens}")
         # 실제 요청을 보내지 않음
 
+APSAlertPayload = TypedDict('APSAlertPayload', {
+    'title': NotRequired[str],
+    'body': NotRequired[str],
+    'title-loc-key': NotRequired[str],
+    'title-loc-args': NotRequired[List[str]],
+    'loc-key': NotRequired[str],
+    'loc-args': NotRequired[List[str]],
+})
+
+APSPayload = TypedDict('APSPayload', {
+    'alert': APSAlertPayload,
+    'badge': NotRequired[int],
+    'sound': NotRequired[str],
+    # 'content-available': NotRequired[int],
+    'mutable-content': Literal[1, 0],
+    'thread-id': NotRequired[str],
+})
+
 
 class APNS:
     PROD_URL = "https://api.push.apple.com/3/device/"
@@ -153,6 +171,20 @@ class APNS:
         self.sandbox = sandbox
 
         self.base_url = self.DEV_URL if sandbox else self.PROD_URL
+
+    def send_notification_ex(self,
+                             aps: APSPayload,
+                             device_tokens: List[str],
+                             user_info: dict = None):
+
+        if user_info is None:
+            payload = dict()
+        else:
+            payload = user_info.copy()
+
+        payload['aps'] = aps
+
+        self.send_push(payload=payload, device_tokens=device_tokens)
 
     def send_notification(self,
                           title: str,

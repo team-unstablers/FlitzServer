@@ -141,22 +141,28 @@ class DirectMessage(BaseModel):
         ).values_list('user_id', flat=True)
 
         for participant_id in participants:
-            user_tasks.send_push_message.delay_on_commit(
+            user_tasks.send_push_message_ex.delay_on_commit(
                 participant_id,
                 'message',
-                notification_title,
-                notification_body,
-                {
+                aps={
+                    'alert': {
+                        'title': notification_title,
+                        'body': notification_body,
+                        'title-loc-key': 'fz.notification.message.title',
+                        'title-loc-args': [self.sender.display_name],
+                    },
+                    'sound': 'message.aif',
+                    'thread-id': str(self.conversation.id),
+                    'mutable-content': 1,
+                },
+                user_info={
                     'type': 'message',
                     'user_id': str(self.sender.id),
                     'user_display_name': self.sender.display_name,
                     'user_profile_image_url': self.sender.profile_image_url,
                     'message_content': notification_body,
                     'conversation_id': str(self.conversation.id)
-                },
-                thread_id=str(self.conversation.id),
-                mutable_content=True,
-                sound='message.aif'
+                }
             )
 
     def get_content_with_url(self) -> dict:
