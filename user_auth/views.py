@@ -1,6 +1,7 @@
 import json
 
 import jwt
+import sentry_sdk
 from django.conf import settings
 from django.db import transaction
 from django.http import HttpResponse
@@ -125,5 +126,6 @@ def refresh_token_view(request: HttpRequest):
     except jwt.InvalidTokenError:
         return HttpResponse(status=401)
     except Exception as e:
-        return HttpResponse(status=401)
+        sentry_sdk.capture_exception(e)
+        return HttpResponse(status=500)
 
