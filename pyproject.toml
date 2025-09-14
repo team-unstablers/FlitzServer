@@ -33,6 +33,7 @@ drf-orjson-renderer = "^1.7.3"
 python-gnupg = "^0.5.5"
 python-dotenv = "^1.1.1"
 pycryptodome = "^3.23.0"
+sentry-sdk = {extras = ["django"], version = "^2.37.1"}
 
 
 [tool.poetry.group.dev.dependencies]
