@@ -3,6 +3,8 @@ Development environment settings for Flitz project.
 """
 from .settings_base import *
 
+import sentry_sdk
+
 SECRET_KEY = os.environ.get('FLITZ_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -76,6 +78,16 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+FLITZ_GIT_COMMIT = os.environ.get('FLITZ_GIT_COMMIT', 'UNKNOWN')
+
+sentry_sdk.init(
+    dsn="https://7828eab8cc388eefd1a78671e34ff1e4@o576637.ingest.us.sentry.io/4510016755204096",
+    release=FLITZ_GIT_COMMIT,
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)
 
 # APNS Configuration for development
 APNS_USE_SANDBOX = False

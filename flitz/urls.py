@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.http import HttpResponse
 
 from rest_framework import routers, permissions
 from drf_yasg.views import get_schema_view
@@ -33,6 +34,9 @@ from location.views import FlitzWaveViewSet
 from safety.views import UserBlockViewSet, UserContactsTriggerViewSet
 from notice.views import NoticeViewSet
 from support.views import SupportTicketViewSet
+
+def health_check_handler(request):
+    return HttpResponse(content="OK", content_type="text/plain", status=200)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -71,6 +75,7 @@ router.register(r'support-tickets', SupportTicketViewSet, basename='SupportTicke
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('__health_check__', health_check_handler, name='health_check'),
     path('auth/token', csrf_exempt(request_token)),
     path('auth/token/refresh', csrf_exempt(refresh_token_view)),
 ]
