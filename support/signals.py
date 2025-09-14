@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.db import transaction
 
 from flitz.utils.slack import post_slack_message
-from user.tasks import send_push_message
+from user.tasks import send_push_message, send_push_message_ex
 from .models import SupportTicket, SupportTicketResponse
 
 
@@ -43,12 +43,21 @@ def notify_support_ticket_response_created(sender, instance, created, **kwargs):
         )
         
         # 사용자 푸시 알림
-        send_push_message.delay(
+        send_push_message_ex.delay_on_commit(
             user_id=instance.ticket.user.id,
             type='notice',
-            title='문의해주신 티켓에 새 답변이 등록되었습니다.',
-            body=f'"{instance.ticket.title}" 티켓에 새로운 답변이 등록되었습니다.',
-            data={
+            aps={
+                'alert': {
+                    'title': '문의해주신 티켓에 새 답변이 등록되었습니다.',
+                    'body': f'"{instance.ticket.title}" 티켓에 새로운 답변이 등록되었습니다.',
+                    'title-loc-key': 'fz.notification.support_response.title',
+                    'title-loc-args': [],
+                    'loc-key': 'fz.notification.support_response.body',
+                    'loc-args': [instance.ticket.title],
+                },
+                'mutable-content': 1,
+            },
+            user_info={
                 'type': 'support_response',
                 'ticket_id': str(instance.ticket.id),
                 'response_id': str(instance.id)
