@@ -51,6 +51,7 @@ def notify_support_ticket_response_created(sender, instance, created, **kwargs):
                     'title': '문의해주신 티켓에 새 답변이 등록되었습니다.',
                     'body': f'"{instance.ticket.title}" 티켓에 새로운 답변이 등록되었습니다.',
                     'title-loc-key': 'fz.notification.support_response.title',
+                    'title-loc-args': [],
                     'loc-key': 'fz.notification.support_response.body',
                     'loc-args': [instance.ticket.title],
                 },
