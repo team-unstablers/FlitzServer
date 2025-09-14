@@ -37,6 +37,9 @@ class UserSession(BaseModel):
         사용자에게 푸시 메시지를 보냅니다.
         """
 
+        if not self.apns_token:
+            return
+
         apns = APNS.default()
         apns.send_notification(title, body, [self.apns_token], data, thread_id=thread_id, mutable_content=mutable_content, sound=sound)
 
@@ -46,6 +49,9 @@ class UserSession(BaseModel):
         """
         사용자에게 푸시 메시지를 보냅니다.
         """
+
+        if not self.apns_token:
+            return
 
         apns = APNS.default()
         apns.send_notification_ex(
