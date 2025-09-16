@@ -14,13 +14,13 @@
 ## Limitations of ChronoWave
 
 - ChronoWave로 교환된 카드는, 일반 Wave로 교환된 카드보다 느리게 열립니다.
-  - TODO: 조건 설정 필요
+  - ~~TODO: 조건 설정 필요~~ 이대로 두어도 될 것 같다
 
 ## Implementation status
 
 - [x] ChronoWave Matcher의 초기 구현
-- [ ] ChronoWave로 교환된 카드의 오픈 조건 설정 
-- [ ] ChronoWave Matcher의 초기 테스트
+- [x] ChronoWave로 교환된 카드의 오픈 조건 설정 -> 이대로 유지하기로 한다
+- [x] ChronoWave Matcher의 초기 테스트
 - [ ] ChronoWave Matcher 기능 개선
   - [ ] 매칭 확률을 더 높이기 위한 구조 개선
     현재는 UserLocation은 반드시 하나만 저장하고 있음. LocationHistory를 저장하고, 2~3개 정도의 최근 위치를 활용하는 방안 검토
