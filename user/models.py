@@ -244,7 +244,9 @@ class User(AbstractUser):
             else:
                 # 새로 생성된 경우에는 시간대 업데이트
                 location.update_timezone()
-                
+
+            # update geohash
+            location.update_geohash()
             location.save()
 
         return location
@@ -338,7 +340,16 @@ class UserSettings(BaseModel):
             return True
 
 class UserIdentity(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+
+            models.Index(fields=['gender']),
+            models.Index(fields=['is_trans', 'trans_prefers_safe_match']),
+            models.Index(fields=['welcomes_trans']),
+        ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity')
 
     # 성별 필드
     gender = models.IntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
