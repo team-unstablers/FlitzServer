@@ -213,7 +213,7 @@ class User(AbstractUser):
         self.primary_session.send_push_message_ex(aps, user_info=user_info)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None, force_timezone_update: bool=False):
-        from location.models import UserLocation
+        from location.models import UserLocation, UserLocationHistory
         from location.utils.distance import measure_distance
 
         with transaction.atomic():
@@ -248,6 +248,28 @@ class User(AbstractUser):
             # update geohash
             location.update_geohash()
             location.save()
+
+            location_history = UserLocationHistory.objects.create(
+                user=self,
+
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude or 0.0,
+                accuracy=accuracy or 0.0,
+            )
+
+            location_history.update_timezone()
+            location_history.update_geohash()
+
+            location_history.save()
+
+            # 위치 기록은 최대 5개까지만 보관
+            ids_to_delete = list(UserLocationHistory.objects.filter(user=self).order_by('-created_at')[5:].values_list('id', flat=True))
+
+            if ids_to_delete:
+                UserLocationHistory.objects.filter(id__in=ids_to_delete).delete()
+
+
 
         return location
 

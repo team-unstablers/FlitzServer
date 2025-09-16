@@ -80,6 +80,43 @@ class UserLocation(models.Model, LocationDistanceMixin):
     def timezone_obj(self) -> pytz.timezone:
         return pytz.timezone(self.timezone)
 
+class UserLocationHistory(BaseModel, LocationDistanceMixin):
+    class Meta:
+        get_latest_by = 'created_at'
+
+        indexes = [
+            models.Index(fields=['user']),
+
+            models.Index(fields=['geohash']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='location_history')
+
+    latitude = models.FloatField(null=False, blank=False)
+    longitude = models.FloatField(null=False, blank=False)
+    altitude = models.FloatField(null=True, blank=True)
+    accuracy = models.FloatField(null=True, blank=True)
+
+    timezone = models.CharField(max_length=64, null=False, blank=False, default='UTC')
+
+    geohash = models.CharField(max_length=10, null=True, blank=True)
+
+    def update_geohash(self):
+        self.geohash = pgh.encode(self.latitude, self.longitude, precision=GEOHASH_PRECISION)
+
+    def update_timezone(self):
+        timezone_obj = get_timezone_from_coordinates(self.latitude, self.longitude)
+        self.timezone = str(timezone_obj)
+
+    @property
+    def timezone_obj(self) -> pytz.timezone:
+        return pytz.timezone(self.timezone)
+
+
+
 class DiscoverySession(BaseModel):
     class Meta:
         indexes = [
