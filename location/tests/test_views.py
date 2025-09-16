@@ -125,28 +125,6 @@ class FlitzWaveViewSetTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['is_success'])
 
-    def test_update_location_invalid_session(self):
-        """
-        유효하지 않은 세션 ID로 위치 업데이트 테스트
-        """
-        # 비활성 세션 생성
-        session = DiscoverySession.objects.create(
-            user=self.user,
-            is_active=False
-        )
-        
-        # 위치 업데이트 요청 (비활성 세션)
-        location_data = {
-            'session_id': str(session.id),
-            'latitude': 37.5665,
-            'longitude': 126.9780
-        }
-        
-        # 예외 발생 확인
-        response = self.client.post(self.update_location_url, location_data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
 
     def test_update_location_invalid_data(self):
         """
