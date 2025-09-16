@@ -192,3 +192,32 @@ class ChronoWaveMatcherTest(TransactionTestCase):
             self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_pansexual_man))
 
 
+    def test_time_lag_2(self):
+        """
+        테스트 케이스 #3 - 시간 차이에 따른 매칭
+
+        - 같은 영역에 한번이라도 방문한 적이 있는 사용자는 매칭 대상이 됩니다.
+        """
+
+        with freeze_time("2025-02-03 09:00:00"):
+            self.__setup_location(self.test_user_pansexual_man, latlon=self.LOCATION_종로_탑골공원)
+
+        with freeze_time("2025-02-03 14:31:23"):
+            self.__setup_location(self.test_user_gay_1, latlon=self.LOCATION_종로_누누)
+            self.__setup_location(self.test_user_gay_2, latlon=self.LOCATION_종각_교보문고_광화문점)
+
+        with freeze_time("2025-02-03 15:29:10"):
+            self.__setup_location(self.test_user_gay_1, latlon=self.LOCATION_시청역_서울광장)
+            self.__setup_location(self.test_user_gay_2, latlon=self.LOCATION_종로_탑골공원)
+            self.__setup_location(self.test_user_pansexual_man, latlon=self.LOCATION_시청역_플라자호텔)
+
+        with freeze_time("2025-02-03 15:45:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # test_user_gay_1과 test_user_gay_2가 매칭되어야 한다
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_gay_2))
+
+            # 단, 시간 차가 너무 나는 test_user_pansexual_man과는 매칭되지 않아야 한다
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_pansexual_man, self.test_user_gay_1))
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_pansexual_man, self.test_user_gay_2))

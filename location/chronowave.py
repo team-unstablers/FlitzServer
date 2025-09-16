@@ -9,7 +9,7 @@ from django.db.models import QuerySet, Q, F
 from django.utils import timezone
 
 from card.models import CardDistribution
-from location.models import UserLocation, DiscoveryHistory
+from location.models import UserLocation, DiscoveryHistory, UserLocationHistory
 from user.models import User, UserIdentity
 
 
@@ -32,7 +32,7 @@ class ChronoWaveMatcher:
         """
 
         # SELECT DISTINCT geohash FROM user_location WHERE geohash IS NOT NULL AND geohash != '';
-        queryset = UserLocation.objects\
+        queryset = UserLocationHistory.objects\
             .exclude(geohash__isnull=True)\
             .exclude(geohash='')\
             .values_list('geohash', flat=True)\
@@ -138,10 +138,13 @@ class ChronoWaveMatcher:
         # SELECT * FROM user_location WHERE geohash = self.geohash;
         # TODO: exclude(settings__chronowave_enabled=False)
         base_queryset = User.objects.filter(
-            location__geohash=self.geohash
-        ).exclude(
-            # 위치 정보가 너무 오래된 사용자 제외
-            location__updated_at__lt=now - MAX_DELTA
+            Q(
+                # 같은 장소에 방문했던 사용자 중에서..
+                location_history__geohash=self.geohash,
+                
+                # 위치 정보가 너무 오래된 사용자 제외
+                location_history__updated_at__gte=now - MAX_DELTA
+            )
         ).select_related('identity', 'main_card')
 
         if base_queryset.only('id').count() < 2:

@@ -21,8 +21,8 @@
 - [x] ChronoWave Matcher의 초기 구현
 - [x] ChronoWave로 교환된 카드의 오픈 조건 설정 -> 이대로 유지하기로 한다
 - [x] ChronoWave Matcher의 초기 테스트
-- [ ] ChronoWave Matcher 기능 개선
-  - [ ] 매칭 확률을 더 높이기 위한 구조 개선
+- [x] ChronoWave Matcher 기능 개선
+  - [x] 매칭 확률을 더 높이기 위한 구조 개선
     현재는 UserLocation은 반드시 하나만 저장하고 있음. LocationHistory를 저장하고, 2~3개 정도의 최근 위치를 활용하는 방안 검토
   - [ ] LocationHistory 플러싱 태스크 작성 및 주기 설정
 
