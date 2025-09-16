@@ -352,14 +352,14 @@ class UserIdentity(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity')
 
     # 성별 필드
-    gender = models.IntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
+    gender = models.PositiveIntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
     # 트랜스젠더 여부
     is_trans = models.BooleanField(default=False)
     # 트랜스젠더 여부를 다른 사용자에게 표시할 것인가
     display_trans_to_others = models.BooleanField(default=False)
 
     # 선호하는 성별 (비트 마스크)
-    preferred_genders = models.IntegerField(default=0)
+    preferred_genders = models.PositiveIntegerField(default=0)
     # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부,
     # 구현 시 배제 옵션이 아니라, 환영 옵션임을 인지해야 합니다: 이 설정을 False로 한다고 해도 트랜스젠더 분들과는 매칭될 수 있어야 합니다.
     welcomes_trans = models.BooleanField(default=False)
