@@ -5,7 +5,7 @@ from typing import Optional
 import pygeohash as pgh
 import sentry_sdk
 
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, F
 from django.utils import timezone
 
 from card.models import CardDistribution
@@ -92,9 +92,12 @@ class ChronoWaveMatcher:
 
         user_b_queryset = base_queryset.exclude(
             id=user_a.id
-        ).filter(
+        ).annotate(
+            # JOIN 된 컬럼에서는 filter() 내에서 bitwise 연산자를 사용할 수 없으므로, annotate()로 우회
             # (gender & user_a.identity.preferred_genders) != 0
-            identity__gender__bitand=identity.preferred_genders,
+            masked_gender=F('identity__gender').bitand(identity.preferred_genders)
+        ).filter(
+            masked_gender__gt=0
         ).exclude(
             # user_a를 차단한 사용자는 제외
             blocked_users__id__in=[user_a.id],
