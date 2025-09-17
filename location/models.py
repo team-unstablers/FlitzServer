@@ -103,6 +103,7 @@ class UserLocationHistory(BaseModel, LocationDistanceMixin):
     timezone = models.CharField(max_length=64, null=False, blank=False, default='UTC')
 
     geohash = models.CharField(max_length=10, null=True, blank=True)
+    is_in_safety_zone = models.BooleanField(default=False)
 
     def update_geohash(self):
         self.geohash = pgh.encode(self.latitude, self.longitude, precision=GEOHASH_PRECISION)
