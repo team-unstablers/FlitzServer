@@ -62,7 +62,7 @@ def reverse_evaluate_block_triggers(user_id: UUID):
         hashed_phone_number = user.phone_number_hashed
 
         queryset = UserContactsTrigger.objects.filter(
-            hashed_phone_number=hashed_phone_number
+            phone_number_hashed=hashed_phone_number
         ).select_related('user')
 
         iterator = queryset.iterator(chunk_size=100)
