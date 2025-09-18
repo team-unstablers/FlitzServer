@@ -261,6 +261,10 @@ class User(AbstractUser):
             location_history.update_timezone()
             location_history.update_geohash()
 
+            # Safety zone 체크
+            if hasattr(self, 'wave_safety_zone'):
+                location_history.is_in_safety_zone = self.wave_safety_zone.evaluate(latitude, longitude)
+
             location_history.save()
 
             # 위치 기록은 최대 5개까지만 보관
