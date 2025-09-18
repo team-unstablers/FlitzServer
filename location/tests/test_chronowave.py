@@ -8,6 +8,7 @@ from user.models import User, UserIdentity, UserGenderBit
 from card.models import Card, CardDistribution
 from location.models import DiscoverySession, DiscoveryHistory, UserLocation
 from location.chronowave import ChronoWaveMatcher
+from safety.models import UserWaveSafetyZone
 
 class ChronoWaveMatcherTest(TransactionTestCase):
 
@@ -221,3 +222,113 @@ class ChronoWaveMatcherTest(TransactionTestCase):
             # 단, 시간 차가 너무 나는 test_user_pansexual_man과는 매칭되지 않아야 한다
             self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_pansexual_man, self.test_user_gay_1))
             self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_pansexual_man, self.test_user_gay_2))
+
+    def test_safety_zone_respect(self):
+        """
+        테스트 케이스 #4 - Safety Zone 존중
+
+        - Safety Zone이 설정된 사용자가 해당 구역 내에 있을 때는 ChronoWave 매칭에서 제외되어야 합니다.
+        - Safety Zone 밖에 있을 때는 정상적으로 매칭되어야 합니다.
+        """
+
+        # test_user_gay_1에 대해 종로 탑골공원을 중심으로 500m 반경의 safety zone 설정
+        safety_zone = UserWaveSafetyZone.objects.create(
+            user=self.test_user_gay_1,
+            latitude=self.LOCATION_종로_탑골공원[0],
+            longitude=self.LOCATION_종로_탑골공원[1],
+            radius=500,  # 500m 반경
+            is_enabled=True,
+            enable_wave_after_exit=True
+        )
+
+        with freeze_time("2025-02-03 14:00:00"):
+            # test_user_gay_1이 safety zone 내에 위치
+            self.__setup_location(self.test_user_gay_1, latlon=self.LOCATION_종로_누누)  # 종로 탑골공원에서 가까움
+            # test_user_gay_2도 같은 지역에 위치
+            self.__setup_location(self.test_user_gay_2, latlon=self.LOCATION_종로_탑골공원)
+            # test_user_pansexual_man도 같은 지역에 위치
+            self.__setup_location(self.test_user_pansexual_man, latlon=self.LOCATION_종로_누누)
+
+        with freeze_time("2025-02-03 14:30:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # test_user_gay_1은 safety zone 내에 있으므로 매칭되지 않아야 한다
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_gay_2))
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_pansexual_man))
+
+            # 하지만 test_user_gay_2와 test_user_pansexual_man은 서로 매칭되어야 한다
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_2, self.test_user_pansexual_man))
+
+        # 기존 카드 배포 삭제 (다음 테스트를 위해)
+        CardDistribution.objects.all().delete()
+
+        with freeze_time("2025-02-03 15:00:00"):
+            # test_user_gay_1이 safety zone 밖으로 이동
+            self.__setup_location(self.test_user_gay_1, latlon=self.LOCATION_시청역_서울광장)  # 종로에서 멀리 떨어짐
+            # 다른 사용자도 시청역 근처로 이동
+            self.__setup_location(self.test_user_gay_2, latlon=self.LOCATION_시청역_플라자호텔)
+
+        with freeze_time("2025-02-03 15:30:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_시청역)
+            matcher.execute()
+
+            # 이제 test_user_gay_1은 safety zone 밖에 있으므로 정상적으로 매칭되어야 한다
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_gay_2))
+
+    def test_safety_zone_with_location_history(self):
+        """
+        테스트 케이스 #5 - Safety Zone과 LocationHistory
+
+        - LocationHistory에서 is_in_safety_zone 플래그가 제대로 설정되고
+        - ChronoWave 매칭에서 이를 존중하는지 확인합니다.
+        """
+
+        # test_user_lesbian_1에 대해 종로 탑골공원을 중심으로 1km 반경의 safety zone 설정
+        safety_zone = UserWaveSafetyZone.objects.create(
+            user=self.test_user_lesbian_1,
+            latitude=self.LOCATION_종로_탑골공원[0],
+            longitude=self.LOCATION_종로_탑골공원[1],
+            radius=1000,  # 1km 반경
+            is_enabled=True,
+            enable_wave_after_exit=True
+        )
+
+        with freeze_time("2025-02-03 10:00:00"):
+            # test_user_lesbian_1이 여러 위치를 이동하며 기록 생성
+            self.__setup_location(self.test_user_lesbian_1, latlon=self.LOCATION_종로_탑골공원)  # safety zone 내
+            self.__setup_location(self.test_user_lesbian_2, latlon=self.LOCATION_종로_누누)
+
+        with freeze_time("2025-02-03 11:00:00"):
+            self.__setup_location(self.test_user_lesbian_1, latlon=self.LOCATION_종로_누누)  # safety zone 내
+            self.__setup_location(self.test_user_bisexual_mtf, latlon=self.LOCATION_종로_탑골공원)
+
+        with freeze_time("2025-02-03 12:00:00"):
+            self.__setup_location(self.test_user_lesbian_1, latlon=self.LOCATION_시청역_서울광장)  # safety zone 밖
+
+        # LocationHistory 확인
+        from location.models import UserLocationHistory
+
+        lesbian_1_histories = UserLocationHistory.objects.filter(
+            user=self.test_user_lesbian_1
+        ).order_by('created_at')
+
+        # safety zone 내의 기록들은 is_in_safety_zone=True여야 함
+        for history in lesbian_1_histories[:2]:
+            self.assertTrue(history.is_in_safety_zone, f"Location at {history.latitude}, {history.longitude} should be in safety zone")
+
+        # safety zone 밖의 기록은 is_in_safety_zone=False여야 함
+        if lesbian_1_histories.count() > 2:
+            self.assertFalse(lesbian_1_histories[2].is_in_safety_zone, "Location at 시청역 should not be in safety zone")
+
+        with freeze_time("2025-02-03 12:30:00"):
+            # 종로 지역에서 ChronoWave 매칭 실행
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # test_user_lesbian_1의 종로 지역 기록은 모두 safety zone 내에 있으므로 매칭되지 않아야 함
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_lesbian_1, self.test_user_lesbian_2))
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_lesbian_1, self.test_user_bisexual_mtf))
+
+            # 하지만 test_user_lesbian_2와 test_user_bisexual_mtf는 서로 매칭되어야 함
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_lesbian_2, self.test_user_bisexual_mtf))

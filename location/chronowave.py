@@ -35,6 +35,7 @@ class ChronoWaveMatcher:
         queryset = UserLocationHistory.objects\
             .exclude(geohash__isnull=True)\
             .exclude(geohash='')\
+            .exclude(is_in_safety_zone=True)\
             .values_list('geohash', flat=True)\
             .distinct()
 
@@ -141,9 +142,12 @@ class ChronoWaveMatcher:
             Q(
                 # 같은 장소에 방문했던 사용자 중에서..
                 location_history__geohash=self.geohash,
-                
+
                 # 위치 정보가 너무 오래된 사용자 제외
-                location_history__updated_at__gte=now - MAX_DELTA
+                location_history__updated_at__gte=now - MAX_DELTA,
+
+                # safety zone 내에 있는 위치 기록은 제외 (ChronoWave 매칭 대상에서 제외)
+                location_history__is_in_safety_zone=False
             )
         ).select_related('identity', 'main_card')
 
