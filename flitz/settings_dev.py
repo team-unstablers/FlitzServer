@@ -78,6 +78,7 @@ CHANNEL_LAYERS = {
 }
 
 # APNS Configuration for development
+APNS_BUNDLE_ID = "pl.unstabler.flitz.dev"
 APNS_USE_SANDBOX = True
 
 PHONE_NUMBER_HASH_SALT = 'd634]Asp+,!a?pzbp*V2LM4x%qDmbE#.'
