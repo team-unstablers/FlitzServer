@@ -226,6 +226,16 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
             models.Index(fields=['updated_at']),
         ]
 
+    class DistributionMethod(models.IntegerChoices):
+        # Flitz Wave (Bluetooth LE)를 통해 배포됨
+        WAVE = 0
+
+        # Flitz ChronoWave (Geohash-based)를 통해 배포됨
+        CHRONOWAVE = 1
+
+        # Flitz WaveSpot을 통해 배포됨
+        WAVESPOT = 2
+
     class RevealPhase(models.IntegerChoices):
         # 카드가 아예 표시되지 않음
         HIDDEN = 0
@@ -246,6 +256,8 @@ class CardDistribution(BaseModel, LocationDistanceMixin):
     longitude = models.FloatField(null=True, blank=True)
     altitude = models.FloatField(null=True, blank=True)
     accuracy = models.FloatField(null=True, blank=True)
+
+    distribution_method = models.IntegerField(default=DistributionMethod.WAVE, choices=DistributionMethod.choices)
 
     reveal_phase = models.IntegerField(default=0, choices=RevealPhase.choices)
 

@@ -34,6 +34,7 @@ python-gnupg = "^0.5.5"
 python-dotenv = "^1.1.1"
 pycryptodome = "^3.23.0"
 sentry-sdk = {extras = ["django"], version = "^2.37.1"}
+pygeohash = "^3.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
