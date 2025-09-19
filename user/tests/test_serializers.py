@@ -27,7 +27,7 @@ class PublicUserSerializerTests(TestCase):
     def test_contains_expected_fields(self):
         """PublicUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
-        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url'})
+        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url', 'fuzzy_distance', 'online_status'})
 
     def test_field_content(self):
         """직렬화된 데이터의 내용이 올바른지 테스트"""
@@ -56,7 +56,7 @@ class PublicSimpleUserSerializerTests(TestCase):
     def test_contains_expected_fields(self):
         """PublicSimpleUserSerializer가 예상된 필드를 포함하는지 테스트"""
         data = self.serializer.data
-        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url'})
+        self.assertEqual(set(data.keys()), {'id', 'username', 'display_name', 'title', 'bio', 'hashtags', 'profile_image_url', 'fuzzy_distance', 'online_status'})
 
     def test_field_content(self):
         """직렬화된 데이터의 내용이 올바른지 테스트"""
@@ -88,7 +88,7 @@ class PublicSelfUserSerializerTests(TestCase):
                           'hashtags',
                           'profile_image_url',
                           'phone_number', 'email', 'birth_date',
-                          'free_coins', 'paid_coins'})
+                          'free_coins', 'paid_coins', 'fuzzy_distance', 'main_card_id', 'online_status'})
 
     def test_field_content(self):
         """직렬화된 데이터의 내용이 올바른지 테스트"""

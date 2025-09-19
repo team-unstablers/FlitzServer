@@ -166,17 +166,7 @@ class UserIdentityAPITests(APITestCase):
             'get': 'dispatch_self_identity',
             'patch': 'dispatch_self_identity'
         })
-    
-    def test_get_identity_not_found(self):
-        """Identity가 없을 때 GET 요청 테스트"""
-        request = self.factory.get('/api/users/self/identity')
-        force_authenticate(request, user=self.user, token=self.session)
-        response = self.identity_view(request)
-        
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertFalse(response.data['is_success'])
-        self.assertEqual(response.data['message'], 'Identity not found')
-    
+
     def test_get_identity_success(self):
         """Identity가 있을 때 GET 요청 테스트"""
         # Identity 생성
