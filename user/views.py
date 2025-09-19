@@ -523,11 +523,17 @@ class PublicUserViewSet(viewsets.ReadOnlyModelViewSet):
         if user.id == target_user.id:
             raise UnsupportedOperationException()
 
+        block = UserBlock.objects.filter(
+            user=target_user,
+            blocked_by=user,
+            reason=UserBlock.Reason.BY_USER
+        )
+
+        if not block.exists():
+            return Response({'is_success': False}, status=400)
+
         with transaction.atomic():
-            UserBlock.objects.filter(
-                user=target_user,
-                blocked_by=user
-            ).delete()
+            block.delete()
 
         return Response({'is_success': True}, status=204)
 

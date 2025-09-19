@@ -5,8 +5,9 @@ from urllib.parse import urlencode
 from unittest import mock
 from unittest.mock import sentinel
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from channels.testing import WebsocketCommunicator
 from channels.routing import URLRouter
@@ -38,7 +39,7 @@ def generate_test_token(session_id):
         }
     }
 )
-class DirectMessageConsumerTests(TestCase):
+class DirectMessageConsumerTests(TransactionTestCase):
     @database_sync_to_async
     def setup_test_data(self):
         """테스트 데이터 설정"""

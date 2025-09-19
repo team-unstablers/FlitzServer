@@ -73,21 +73,26 @@ class CardDistributionTestCase(TestCase):
         """opponent 속성이 카드 소유자를 올바르게 반환하는지 테스트합니다."""
         self.assertEqual(self.distribution.opponent, self.user1)
 
-    @patch('card.models.CardDistribution.distance_to')
-    def test_is_okay_to_reveal_assertive_distance(self, mock_distance_to):
+    def test_is_okay_to_reveal_assertive_blocked(self):
         """
-        assertive condition에서 거리 조건 테스트합니다.
-        - opponent가 너무 가까이 있으면 False 반환
-        - opponent가 충분히 멀리 있으면 True 반환
+        assertive condition에서 차단 조건 테스트합니다.
+        - opponent가 차단되어 있으면 False 반환
+        - opponent가 차단되어 있지 않으면 True 반환
         """
-        # 너무 가까운 경우 (기준보다 가까움)
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_ASSERTIVE'] - 0.1
-        self.assertFalse(self.distribution.is_okay_to_reveal_assertive)
-        
-        # 충분히 멀리 있는 경우 (기준보다 멀리 있음)
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_ASSERTIVE'] + 0.1
+        from safety.models import UserBlock
+
+        # 차단하지 않은 경우
         self.assertTrue(self.distribution.is_okay_to_reveal_assertive)
 
+        # 차단한 경우
+        UserBlock.objects.create(
+            blocked_by=self.user2,  # 카드 수신자
+            user=self.user1,  # 카드 소유자 (차단된 사용자)
+            type=UserBlock.Type.BLOCK
+        )
+        self.assertFalse(self.distribution.is_okay_to_reveal_assertive)
+
+    @override_settings(DEVELOPMENT_MODE=False)
     @patch('card.models.CardDistribution.distance_to')
     def test_is_okay_to_reveal_soft(self, mock_distance_to):
         """
@@ -95,51 +100,70 @@ class CardDistributionTestCase(TestCase):
         - 거리 조건과 시간 조건 모두 충족하면 True 반환
         - 조건 중 하나라도 충족하지 않으면 False 반환
         """
+        # 실제 코드의 값 사용: 300m, 30분
+        REVEAL_DISTANCE_SOFT = 0.3  # 300 meters
+        REVEAL_TIMEDELTA_SOFT = timedelta(minutes=30)
+
         # 시간, 거리 모두 충족하지 않는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_SOFT'] - 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=1)  # 시간 조건 충족하지 않음
+        mock_distance_to.return_value = REVEAL_DISTANCE_SOFT - 0.1
+        self.distribution.created_at = timezone.now() - timedelta(minutes=20)  # 시간 조건 충족하지 않음
         self.assertFalse(self.distribution.is_okay_to_reveal_soft)
-        
+
         # 시간만 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_SOFT'] - 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=3)  # 시간 조건 충족
+        mock_distance_to.return_value = REVEAL_DISTANCE_SOFT - 0.1
+        self.distribution.created_at = timezone.now() - timedelta(minutes=40)  # 시간 조건 충족
         self.assertFalse(self.distribution.is_okay_to_reveal_soft)
-        
+
         # 거리만 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_SOFT'] + 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=1)  # 시간 조건 충족하지 않음
+        mock_distance_to.return_value = REVEAL_DISTANCE_SOFT + 0.1
+        self.distribution.created_at = timezone.now() - timedelta(minutes=20)  # 시간 조건 충족하지 않음
         self.assertFalse(self.distribution.is_okay_to_reveal_soft)
-        
+
         # 시간, 거리 모두 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_SOFT'] + 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=3)  # 시간 조건 충족
+        mock_distance_to.return_value = REVEAL_DISTANCE_SOFT + 0.1
+        self.distribution.created_at = timezone.now() - timedelta(minutes=40)  # 시간 조건 충족
         self.assertTrue(self.distribution.is_okay_to_reveal_soft)
 
+    @patch('location.models.UserLocation.distance_to')
     @patch('card.models.CardDistribution.distance_to')
-    def test_is_okay_to_reveal_hard(self, mock_distance_to):
+    def test_is_okay_to_reveal_hard(self, mock_distance_to, mock_user_distance_to):
         """
         hard condition 테스트합니다.
-        - 거리 또는 시간 조건 중 하나라도 충족하면 True 반환
-        - 둘 다 충족하지 않으면 False 반환
+        - 사용자 간 거리가 500m 이상이고, (카드 교환 지점으로부터 1km 이상 OR 3시간 이상 경과) 시 True 반환
         """
-        # 시간, 거리 모두 충족하지 않는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_HARD'] - 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=20)  # 시간 조건 충족하지 않음
+        # 실제 코드의 값: 사용자간 거리 500m, 교환지점 1km, 3시간
+        REVEAL_USER_DISTANCE_HARD = 0.5  # 500 meters
+        REVEAL_DISTANCE_HARD = 1  # 1 km
+        REVEAL_TIMEDELTA_HARD = timedelta(hours=3)
+
+        # 사용자 간 거리가 가까운 경우 - 무조건 False
+        mock_user_distance_to.return_value = REVEAL_USER_DISTANCE_HARD - 0.1
+        mock_distance_to.return_value = REVEAL_DISTANCE_HARD + 0.5
+        self.distribution.created_at = timezone.now() - timedelta(hours=4)
         self.assertFalse(self.distribution.is_okay_to_reveal_hard)
-        
-        # 시간만 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_HARD'] - 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=25)  # 시간 조건 충족
+
+        # 사용자 간 거리 충족, 시간/거리 모두 충족하지 않는 경우
+        mock_user_distance_to.return_value = REVEAL_USER_DISTANCE_HARD + 0.1
+        mock_distance_to.return_value = REVEAL_DISTANCE_HARD - 0.1
+        self.distribution.created_at = timezone.now() - timedelta(hours=2)  # 시간 조건 충족하지 않음
+        self.assertFalse(self.distribution.is_okay_to_reveal_hard)
+
+        # 사용자 간 거리 충족, 시간만 충족하는 경우
+        mock_user_distance_to.return_value = REVEAL_USER_DISTANCE_HARD + 0.1
+        mock_distance_to.return_value = REVEAL_DISTANCE_HARD - 0.1
+        self.distribution.created_at = timezone.now() - timedelta(hours=4)  # 시간 조건 충족
         self.assertTrue(self.distribution.is_okay_to_reveal_hard)
-        
-        # 거리만 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_HARD'] + 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=20)  # 시간 조건 충족하지 않음
+
+        # 사용자 간 거리 충족, 거리만 충족하는 경우
+        mock_user_distance_to.return_value = REVEAL_USER_DISTANCE_HARD + 0.1
+        mock_distance_to.return_value = REVEAL_DISTANCE_HARD + 0.1
+        self.distribution.created_at = timezone.now() - timedelta(hours=2)  # 시간 조건 충족하지 않음
         self.assertTrue(self.distribution.is_okay_to_reveal_hard)
-        
-        # 시간, 거리 모두 충족하는 경우
-        mock_distance_to.return_value = test_settings['CARD_REVEAL_DISTANCE_HARD'] + 0.5
-        self.distribution.created_at = timezone.now() - timedelta(hours=25)  # 시간 조건 충족
+
+        # 모든 조건 충족
+        mock_user_distance_to.return_value = REVEAL_USER_DISTANCE_HARD + 0.1
+        mock_distance_to.return_value = REVEAL_DISTANCE_HARD + 0.1
+        self.distribution.created_at = timezone.now() - timedelta(hours=4)
         self.assertTrue(self.distribution.is_okay_to_reveal_hard)
 
     @patch('card.models.CardDistribution.is_okay_to_reveal_assertive')
@@ -167,51 +191,56 @@ class CardDistributionTestCase(TestCase):
     @patch('card.models.CardDistribution.is_okay_to_reveal_assertive')
     @patch('card.models.CardDistribution.is_okay_to_reveal_soft')
     @patch('card.models.CardDistribution.is_okay_to_reveal_hard')
-    def test_update_reveal_phase_soft_passes(self, mock_hard, mock_soft, mock_assertive):
+    @patch('card.models.CardDistribution.is_okay_to_reveal_immediately')
+    def test_update_reveal_phase_soft_passes(self, mock_immediately, mock_hard, mock_soft, mock_assertive):
         """
         soft condition이 충족될 경우 update_reveal_phase 메서드 테스트합니다.
-        - assertive condition이 충족되고 soft condition이 충족되면 reveal_phase가 FULLY_REVEALED로 변경
+        - assertive condition이 충족되고 soft condition만 충족되면 reveal_phase가 BLURRY_STRONG으로 변경
         """
         # 초기 설정
         self.distribution.reveal_phase = CardDistribution.RevealPhase.HIDDEN
-        
-        # assertive condition 통과, soft condition 통과
+
+        # assertive condition 통과, soft condition만 통과 (immediately, hard 실패)
         mock_assertive.__get__ = MagicMock(return_value=True)
         mock_soft.__get__ = MagicMock(return_value=True)
-        mock_hard.__get__ = MagicMock(return_value=False)  # hard는 상관없음
-        
+        mock_hard.__get__ = MagicMock(return_value=False)
+        mock_immediately.__get__ = MagicMock(return_value=False)
+
         # 메서드 실행
         self.distribution.update_reveal_phase()
-        
-        # reveal_phase가 FULLY_REVEALED로 변경되어야 함
-        self.assertEqual(self.distribution.reveal_phase, CardDistribution.RevealPhase.FULLY_REVEALED)
+
+        # reveal_phase가 BLURRY_STRONG으로 변경되어야 함
+        self.assertEqual(self.distribution.reveal_phase, CardDistribution.RevealPhase.BLURRY_STRONG)
 
     @patch('card.models.CardDistribution.is_okay_to_reveal_assertive')
     @patch('card.models.CardDistribution.is_okay_to_reveal_soft')
     @patch('card.models.CardDistribution.is_okay_to_reveal_hard')
-    def test_update_reveal_phase_hard_passes(self, mock_hard, mock_soft, mock_assertive):
+    @patch('card.models.CardDistribution.is_okay_to_reveal_immediately')
+    def test_update_reveal_phase_hard_passes(self, mock_immediately, mock_hard, mock_soft, mock_assertive):
         """
         hard condition이 충족될 경우 update_reveal_phase 메서드 테스트합니다.
-        - assertive condition이 충족되고, soft는 실패하고 hard condition이 충족되면 reveal_phase가 FULLY_REVEALED로 변경
+        - assertive condition이 충족되고, immediately는 실패하고 hard condition이 충족되면 reveal_phase가 FULLY_REVEALED로 변경
         """
         # 초기 설정
         self.distribution.reveal_phase = CardDistribution.RevealPhase.HIDDEN
-        
-        # assertive condition 통과, soft condition 실패, hard condition 통과
+
+        # assertive condition 통과, immediately 실패, hard condition 통과
         mock_assertive.__get__ = MagicMock(return_value=True)
-        mock_soft.__get__ = MagicMock(return_value=False)
+        mock_soft.__get__ = MagicMock(return_value=False)  # soft는 상관없음
         mock_hard.__get__ = MagicMock(return_value=True)
-        
+        mock_immediately.__get__ = MagicMock(return_value=False)
+
         # 메서드 실행
         self.distribution.update_reveal_phase()
-        
+
         # reveal_phase가 FULLY_REVEALED로 변경되어야 함
         self.assertEqual(self.distribution.reveal_phase, CardDistribution.RevealPhase.FULLY_REVEALED)
 
     @patch('card.models.CardDistribution.is_okay_to_reveal_assertive')
     @patch('card.models.CardDistribution.is_okay_to_reveal_soft')
     @patch('card.models.CardDistribution.is_okay_to_reveal_hard')
-    def test_update_reveal_phase_both_fail(self, mock_hard, mock_soft, mock_assertive):
+    @patch('card.models.CardDistribution.is_okay_to_reveal_immediately')
+    def test_update_reveal_phase_both_fail(self, mock_immediately, mock_hard, mock_soft, mock_assertive):
         """
         soft와 hard condition 모두 실패할 경우 update_reveal_phase 메서드 테스트합니다.
         - assertive는 통과하지만 soft, hard 모두 실패하면 reveal_phase가 변경되지 않아야 함
@@ -219,10 +248,11 @@ class CardDistributionTestCase(TestCase):
         # 초기 설정
         self.distribution.reveal_phase = CardDistribution.RevealPhase.HIDDEN
         
-        # assertive condition 통과, soft와 hard condition 모두 실패
+        # assertive condition 통과, immediately, soft, hard condition 모두 실패
         mock_assertive.__get__ = MagicMock(return_value=True)
         mock_soft.__get__ = MagicMock(return_value=False)
         mock_hard.__get__ = MagicMock(return_value=False)
+        mock_immediately.__get__ = MagicMock(return_value=False)
         
         # 메서드 실행
         self.distribution.update_reveal_phase()
@@ -233,7 +263,8 @@ class CardDistributionTestCase(TestCase):
     @patch('card.models.CardDistribution.is_okay_to_reveal_assertive')
     @patch('card.models.CardDistribution.is_okay_to_reveal_soft')
     @patch('card.models.CardDistribution.is_okay_to_reveal_hard')
-    def test_update_reveal_phase_already_revealed(self, mock_hard, mock_soft, mock_assertive):
+    @patch('card.models.CardDistribution.is_okay_to_reveal_immediately')
+    def test_update_reveal_phase_already_revealed(self, mock_immediately, mock_hard, mock_soft, mock_assertive):
         """
         이미 완전히 공개된 경우 update_reveal_phase 메서드 테스트합니다.
         - 이미 FULLY_REVEALED 상태라면 어떤 조건이든 상관없이 상태가 유지되어야 함
@@ -245,6 +276,7 @@ class CardDistributionTestCase(TestCase):
         mock_assertive.__get__ = MagicMock(return_value=True)
         mock_soft.__get__ = MagicMock(return_value=True)
         mock_hard.__get__ = MagicMock(return_value=True)
+        mock_immediately.__get__ = MagicMock(return_value=True)
         
         # 메서드 실행
         self.distribution.update_reveal_phase()

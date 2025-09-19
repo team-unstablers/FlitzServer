@@ -22,8 +22,8 @@ class UserBlockViewSetTests(APITestCase):
     def test_block_creation(self):
         """차단 생성이 올바르게 동작하는지 테스트합니다."""
         # 사용자2를 차단하는 요청
-        data = {'user_id': str(self.user2.id)}
-        response = self.client.post(self.blocks_url, data, format='json')
+        data = {}
+        response = self.client.put(f'/users/{self.user2.id}/block/', data, format='json')
         
         # 응답 확인
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -50,11 +50,10 @@ class UserBlockViewSetTests(APITestCase):
         )
         
         # 동일한 사용자에 대한 차단 요청
-        data = {'user_id': str(self.user2.id)}
-        response = self.client.post(self.blocks_url, data, format='json')
-        
+        response = self.client.put(f'/users/{self.user2.id}/block/', {}, format='json')
+
         # 응답 확인 - 성공하지만 새로운 객체는 생성되지 않아야 함
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(UserBlock.objects.count(), 1)
         
     def test_block_list_excludes_trigger_blocks(self):
@@ -94,9 +93,8 @@ class UserBlockViewSetTests(APITestCase):
         )
         
         # 차단 삭제 요청
-        block_detail_url = reverse('UserBlock-detail', kwargs={'pk': block.id})
-        response = self.client.delete(block_detail_url)
-        
+        response = self.client.delete(f'/users/{self.user2.id}/block/')
+
         # 응답 확인
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(UserBlock.objects.count(), 0)  # 직접 삭제되어야 함
@@ -112,11 +110,10 @@ class UserBlockViewSetTests(APITestCase):
         )
         
         # 차단 삭제 요청
-        block_detail_url = reverse('UserBlock-detail', kwargs={'pk': trigger_block.id})
-        response = self.client.delete(block_detail_url)
+        response = self.client.delete(f'/users/{self.user2.id}/block/')
         
         # 응답 확인 - 리소스 조회 자체가 금지되어야 함
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(UserBlock.objects.count(), 1)  # 삭제되지 않아야 함
         
     def test_update_not_allowed(self):

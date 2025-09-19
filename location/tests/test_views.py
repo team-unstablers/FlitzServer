@@ -125,7 +125,6 @@ class FlitzWaveViewSetTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['is_success'])
 
-
     def test_update_location_invalid_data(self):
         """
         유효하지 않은 데이터로 위치 업데이트 테스트

@@ -82,7 +82,7 @@ class UserMatchTests(TestCase):
         self.user1 = create_test_user(1)
         self.user2 = create_test_user(2)
 
-    @patch('user.tasks.send_push_message.delay_on_commit')
+    @patch('user.tasks.send_push_message_ex.delay_on_commit')
     @patch('messaging.models.DirectMessageConversation.create_conversation')
     def test_create_match(self, mock_create_conversation, mock_send_push):
         """매칭 생성 테스트"""
