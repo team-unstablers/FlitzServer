@@ -213,7 +213,7 @@ class User(AbstractUser):
         self.primary_session.send_push_message_ex(aps, user_info=user_info)
 
     def update_location(self, latitude: float, longitude: float, altitude: Optional[float]=None, accuracy: Optional[float]=None, force_timezone_update: bool=False):
-        from location.models import UserLocation
+        from location.models import UserLocation, UserLocationHistory
         from location.utils.distance import measure_distance
 
         with transaction.atomic():
@@ -244,8 +244,36 @@ class User(AbstractUser):
             else:
                 # 새로 생성된 경우에는 시간대 업데이트
                 location.update_timezone()
-                
+
+            # update geohash
+            location.update_geohash()
             location.save()
+
+            location_history = UserLocationHistory.objects.create(
+                user=self,
+
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude or 0.0,
+                accuracy=accuracy or 0.0,
+            )
+
+            location_history.update_timezone()
+            location_history.update_geohash()
+
+            # Safety zone 체크
+            if hasattr(self, 'wave_safety_zone'):
+                location_history.is_in_safety_zone = self.wave_safety_zone.evaluate(latitude, longitude)
+
+            location_history.save()
+
+            # 위치 기록은 최대 5개까지만 보관
+            ids_to_delete = list(UserLocationHistory.objects.filter(user=self).order_by('-created_at')[5:].values_list('id', flat=True))
+
+            if ids_to_delete:
+                UserLocationHistory.objects.filter(id__in=ids_to_delete).delete()
+
+
 
         return location
 
@@ -338,17 +366,26 @@ class UserSettings(BaseModel):
             return True
 
 class UserIdentity(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity', db_index=True)
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+
+            models.Index(fields=['gender']),
+            models.Index(fields=['is_trans', 'trans_prefers_safe_match']),
+            models.Index(fields=['welcomes_trans']),
+        ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity')
 
     # 성별 필드
-    gender = models.IntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
+    gender = models.PositiveIntegerField(choices=UserGenderBit.choices, default=UserGenderBit.UNSET)
     # 트랜스젠더 여부
     is_trans = models.BooleanField(default=False)
     # 트랜스젠더 여부를 다른 사용자에게 표시할 것인가
     display_trans_to_others = models.BooleanField(default=False)
 
     # 선호하는 성별 (비트 마스크)
-    preferred_genders = models.IntegerField(default=0)
+    preferred_genders = models.PositiveIntegerField(default=0)
     # 비-트랜스젠더인 경우, 트랜스젠더를 환영할 것인지 여부,
     # 구현 시 배제 옵션이 아니라, 환영 옵션임을 인지해야 합니다: 이 설정을 False로 한다고 해도 트랜스젠더 분들과는 매칭될 수 있어야 합니다.
     welcomes_trans = models.BooleanField(default=False)

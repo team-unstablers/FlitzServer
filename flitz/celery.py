@@ -38,6 +38,16 @@ app.conf.beat_schedule = {
     'poll-user-deletion-phase': {
         'task': 'user.tasks.poll_user_deletion_phase',
         'schedule': crontab(hour='*', minute=0),  # 1시간마다 실행
+    },
+
+    'flush-location-history': {
+        'task': 'location.tasks.flush_location_history',
+        'schedule': crontab(hour='*/6', minute=0),  # 6시간마다 실행
+    },
+
+    'chronowave-match-all': {
+        'task': 'location.tasks.perform_chronowave_match_all',
+        'schedule': crontab(minute='*/30'),  # 30분마다 실행
     }
 }
 
