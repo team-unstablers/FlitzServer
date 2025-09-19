@@ -332,3 +332,108 @@ class ChronoWaveMatcherTest(TransactionTestCase):
 
             # 하지만 test_user_lesbian_2와 test_user_bisexual_mtf는 서로 매칭되어야 함
             self.assertTrue(self.is_card_distributed_mutual(self.test_user_lesbian_2, self.test_user_bisexual_mtf))
+
+    def test_block_relationship(self):
+        """
+        테스트 케이스 #6 - Block 관계 존중
+
+        - Block 관계에 있는 사용자들은 ChronoWave 매칭에서 제외되어야 합니다.
+        - 단방향 차단과 양방향 차단 모두 테스트합니다.
+        """
+        from safety.models import UserBlock
+
+        with freeze_time("2025-02-03 14:00:00"):
+            # 모든 사용자를 종로 지역에 위치시킴
+            self.__setup_location(self.test_user_gay_1, latlon=self.LOCATION_종로_탑골공원)
+            self.__setup_location(self.test_user_gay_2, latlon=self.LOCATION_종로_누누)
+            self.__setup_location(self.test_user_pansexual_man, latlon=self.LOCATION_종로_탑골공원)
+            self.__setup_location(self.test_user_bisexual_mtf, latlon=self.LOCATION_종로_누누)
+
+        # 케이스 1: test_user_gay_1이 test_user_gay_2를 차단
+        block_1_to_2 = UserBlock.objects.create(
+            user=self.test_user_gay_2,
+            blocked_by=self.test_user_gay_1,
+            type=UserBlock.Type.BLOCK,
+            reason=UserBlock.Reason.BY_USER
+        )
+
+        with freeze_time("2025-02-03 14:30:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # test_user_gay_1과 test_user_gay_2는 차단 관계이므로 매칭되지 않아야 함
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_gay_2))
+
+            # 차단 관계가 없는 다른 사용자들끼리는 정상적으로 매칭되어야 함
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_pansexual_man))
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_2, self.test_user_pansexual_man))
+
+        # 기존 카드 배포 삭제 (다음 테스트를 위해)
+        CardDistribution.objects.all().delete()
+        block_1_to_2.delete()
+
+        # 케이스 2: test_user_gay_2가 test_user_gay_1을 차단 (반대 방향)
+        block_2_to_1 = UserBlock.objects.create(
+            user=self.test_user_gay_1,
+            blocked_by=self.test_user_gay_2,
+            type=UserBlock.Type.BLOCK,
+            reason=UserBlock.Reason.BY_USER
+        )
+
+        with freeze_time("2025-02-03 15:00:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # 여전히 test_user_gay_1과 test_user_gay_2는 매칭되지 않아야 함
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_gay_2))
+
+            # 차단 관계가 없는 다른 사용자들끼리는 정상적으로 매칭되어야 함
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_pansexual_man))
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_2, self.test_user_pansexual_man))
+
+        # 기존 카드 배포 삭제 (다음 테스트를 위해)
+        CardDistribution.objects.all().delete()
+
+        # 케이스 3: 양방향 차단 (서로를 차단)
+        block_1_to_2_again = UserBlock.objects.create(
+            user=self.test_user_gay_2,
+            blocked_by=self.test_user_gay_1,
+            type=UserBlock.Type.BLOCK,
+            reason=UserBlock.Reason.BY_USER
+        )
+        # block_2_to_1은 이미 존재
+
+        with freeze_time("2025-02-03 15:30:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # 양방향 차단 상태에서도 매칭되지 않아야 함
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_gay_1, self.test_user_gay_2))
+
+            # 차단 관계가 없는 다른 사용자들끼리는 정상적으로 매칭되어야 함
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_pansexual_man))
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_2, self.test_user_pansexual_man))
+
+        # 기존 카드 배포 삭제 (다음 테스트를 위해)
+        CardDistribution.objects.all().delete()
+        block_1_to_2_again.delete()
+        block_2_to_1.delete()
+
+        # 케이스 4: 트리거에 의한 차단도 동일하게 작동해야 함
+        block_trigger = UserBlock.objects.create(
+            user=self.test_user_bisexual_mtf,
+            blocked_by=self.test_user_pansexual_man,
+            type=UserBlock.Type.BLOCK,
+            reason=UserBlock.Reason.BY_TRIGGER  # 연락처 트리거에 의한 차단
+        )
+
+        with freeze_time("2025-02-03 16:00:00"):
+            matcher = ChronoWaveMatcher(self.GEOHASH_종로)
+            matcher.execute()
+
+            # 트리거에 의한 차단도 일반 차단과 동일하게 작동해야 함
+            self.assertFalse(self.is_card_distributed_mutual_or(self.test_user_bisexual_mtf, self.test_user_pansexual_man))
+
+            # 차단 관계가 없는 다른 사용자들끼리는 정상적으로 매칭되어야 함
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_gay_2))
+            self.assertTrue(self.is_card_distributed_mutual(self.test_user_gay_1, self.test_user_pansexual_man))

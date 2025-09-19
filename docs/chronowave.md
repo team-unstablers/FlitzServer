@@ -27,6 +27,7 @@
   - [x] LocationHistory 플러싱 태스크 작성 및 주기 설정
   - [ ] ChronoWave를 수동으로 옵트아웃 할 수 있도록 한다 - 굳이 옵트아웃을 시켜야 하는가?
   - [x] **(중요)** safety zone을 존중해야 한다: 사용자가 safety zone 내부에 있다면, ChronoWave 매칭 대상에서 제외한다
+  - [x] **(중요)** block 관계에 대한 테스트: block 관계에 있는 사용자는 ChronoWave 매칭 대상에서 제외한다
 
 
 

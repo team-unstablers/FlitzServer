@@ -5,7 +5,7 @@ from typing import Optional
 import pygeohash as pgh
 import sentry_sdk
 
-from django.db.models import QuerySet, Q, F
+from django.db.models import QuerySet, Q, F, Exists, OuterRef
 from django.utils import timezone
 
 from card.models import CardDistribution
@@ -77,7 +77,8 @@ class ChronoWaveMatcher:
         if not (user_a.identity.is_acceptable(user_b.identity) and user_b.identity.is_acceptable(user_a.identity)):
             # TODO: 쿼리 최적화에 실패한 것이므로 경고 로그를 남기고 넘어간다
             self.logger.warning(
-                f'[{self.geohash}] OPTIMIZATION WARNING: sanity check failed for user {user_a.id} and user {user_b.id}')
+                f'[{self.geohash}] OPTIMIZATION WARNING: sanity check failed for user {user_a.id} and user {user_b.id}'
+            )
             return False
 
         # 매칭 성공!
@@ -91,21 +92,35 @@ class ChronoWaveMatcher:
 
         identity = user_a.identity
 
+        from safety.models import UserBlock
+
         user_b_queryset = base_queryset.exclude(
             id=user_a.id
         ).annotate(
             # JOIN 된 컬럼에서는 filter() 내에서 bitwise 연산자를 사용할 수 없으므로, annotate()로 우회
-            # (gender & user_a.identity.preferred_genders) != 0
-            masked_gender=F('identity__gender').bitand(identity.preferred_genders)
+            # user_b의 정체성이 user_a의 선호에 맞는지: (user_b.gender & user_a.preferred_genders) != 0
+            masked_gender=F('identity__gender').bitand(identity.preferred_genders),
+            # user_a의 정체성이 user_b의 선호에 맞는지: (user_a.gender & user_b.preferred_genders) != 0
+            reverse_masked_gender=F('identity__preferred_genders').bitand(identity.gender)
         ).filter(
-            masked_gender__gt=0
+            masked_gender__gt=0,
+            reverse_masked_gender__gt=0
         ).exclude(
             # user_a를 차단한 사용자는 제외
-            blocked_users__id__in=[user_a.id],
+            Exists(
+                UserBlock.objects.filter(
+                    user=user_a,
+                    blocked_by=OuterRef('pk')
+                )
+            )
         ).exclude(
             # user_a가 차단한 사용자는 제외
-            # @claude, is this correct?
-            userblock__blocked_by=user_a
+            Exists(
+                UserBlock.objects.filter(
+                    user=OuterRef('pk'),
+                    blocked_by=user_a
+                )
+            )
         )
 
         if identity.is_trans and identity.trans_prefers_safe_match:
