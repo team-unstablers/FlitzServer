@@ -1,15 +1,89 @@
 from logging import Logger
+from typing import Tuple, List
+
+import pytz
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Q, F
+from django.db.models.aggregates import Count
 from django.utils import timezone
+from pytz.tzinfo import StaticTzInfo, DstTzInfo
 
-from card.models import Card, UserCardAsset, CardDistribution
+from card.models import Card, CardDistribution
+
+from user.tasks import send_push_message_ex
 
 logger: Logger = get_task_logger(__name__)
+
+@shared_task
+def send_card_distribution_notification():
+    """
+    확인할 수 있는 카드 배포가 있을 때 사용자에게 알림을 보냅니다.
+    """
+
+    from location.models import UserLocation
+
+    utc_now = timezone.now()
+    target_timezones: List[Tuple[str, StaticTzInfo | DstTzInfo]] = []
+
+    active_timezones = set(
+        UserLocation.objects.values_list('timezone', flat=True).distinct()
+    )
+
+    for tz_name in active_timezones:
+        tz = pytz.timezone(tz_name)
+        local_time = utc_now.astimezone(tz)
+
+        if local_time.hour == 19:
+            target_timezones.append((tz_name, tz))
+
+    if not target_timezones:
+        logger.info("No target timezones found for card distribution notification.")
+        return
+
+    for (tz_name, tz) in target_timezones:
+        now = utc_now.astimezone(tz)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        distributions = CardDistribution.objects.filter(
+            reveal_phase__in=[
+                CardDistribution.RevealPhase.FULLY_REVEALED,
+            ],
+            user__location__timezone=tz_name,
+            user__disabled_at__isnull=True,
+            created_at__gte=today_start.astimezone(pytz.UTC),
+            dismissed_at__isnull=True,
+            deleted_at__isnull=True,
+        ).values('user_id').annotate(
+            card_count=Count('id')
+        ).values_list('user_id', 'card_count')
+
+        iterator = distributions.iterator(chunk_size=100)
+
+        for (user_id, card_count) in iterator:
+            send_push_message_ex.delay(
+                user_id,
+                type='match',
+                aps={
+                    'alert': {
+                        'title': '새로운 카드가 도착했어요!',
+                        'body': f'{card_count} 개의 카드가 교환되었어요. 지금 바로 확인해보세요!',
+                        'title-loc-key': 'fz.notification.card_distribution.title',
+                        'title-loc-args': [],
+                        'loc-key': 'fz.notification.card_distribution.body',
+                        'loc-args': [str(card_count)],
+                    },
+                    'mutable-content': 1,
+                },
+                user_info={
+                    'type': 'card_distribution'
+                }
+            )
+
+
 
 @shared_task
 def perform_gc_asset_references():

@@ -40,6 +40,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*', minute=0),  # 1시간마다 실행
     },
 
+    'send-card-distribution-notification': {
+        'task': 'card.tasks.send_card_distribution_notification',
+        'schedule': crontab(hour='*', minute=0),  # 매 1시간마다 실행
+    },
+
     'flush-location-history': {
         'task': 'location.tasks.flush_location_history',
         'schedule': crontab(hour='*/6', minute=0),  # 6시간마다 실행

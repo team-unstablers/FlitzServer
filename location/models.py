@@ -47,6 +47,7 @@ class UserLocation(models.Model, LocationDistanceMixin):
 
         indexes = [
             models.Index(fields=['user']),
+            models.Index(fields=['timezone']),
 
             models.Index(fields=['geohash']),
 
