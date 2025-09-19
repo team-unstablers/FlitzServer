@@ -4,6 +4,7 @@ from typing import Optional
 
 import pygeohash as pgh
 import sentry_sdk
+from django.db import transaction
 
 from django.db.models import QuerySet, Q, F, Exists, OuterRef
 from django.utils import timezone
@@ -142,6 +143,7 @@ class ChronoWaveMatcher:
                 sentry_sdk.capture_exception(e)
                 self.logger.error(f'[{self.geohash}] Error during matching for users {user_a.id} and {user_b.id}: {e}')
 
+    @transaction.atomic
     def execute(self):
         # @claude, should we mark this method as transaction.atomic()?
 
