@@ -1,16 +1,39 @@
 import logging
 from datetime import timedelta
 
+import sentry_sdk
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
+from location.chronowave import ChronoWaveMatcher
 from location.models import UserLocationHistory
 
 logger: logging.Logger = get_task_logger(__name__)
 
+@shared_task
+def perform_chronowave_match_all():
+    BATCH_SIZE = 50
+
+    queryset = ChronoWaveMatcher.geohashes_queryset()
+
+    iterator = queryset.iterator(chunk_size=BATCH_SIZE)
+
+    for geohash in iterator:
+        perform_chronowave_match.delay(geohash)
+
+@shared_task(bind=True, max_retries=3)
+def perform_chronowave_match(self, geohash: str):
+    try:
+        matcher = ChronoWaveMatcher(geohash)
+
+        logger.debug(f"Starting ChronoWave matching for geohash: {geohash}")
+        matcher.execute()
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        raise self.retry(exc=exc, countdown=60)
 
 @shared_task
 def flush_location_history(max_history_per_user: int = 5, max_age_hours: int = 72):
