@@ -45,7 +45,7 @@ def send_card_distribution_notification():
         return
 
     for (tz_name, tz) in target_timezones:
-        now = timezone.now().astimezone(tz)
+        now = utc_now.astimezone(tz)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         distributions = CardDistribution.objects.filter(
