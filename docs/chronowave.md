@@ -24,9 +24,9 @@
 - [x] ChronoWave Matcher 기능 개선
   - [x] 매칭 확률을 더 높이기 위한 구조 개선
     현재는 UserLocation은 반드시 하나만 저장하고 있음. LocationHistory를 저장하고, 2~3개 정도의 최근 위치를 활용하는 방안 검토
-  - [ ] LocationHistory 플러싱 태스크 작성 및 주기 설정
-  - [ ] ChronoWave를 수동으로 옵트아웃 할 수 있도록 한다
-  - [ ] **(중요)** safety zone을 존중해야 한다: 사용자가 safety zone 내부에 있다면, ChronoWave 매칭 대상에서 제외한다
+  - [x] LocationHistory 플러싱 태스크 작성 및 주기 설정
+  - [ ] ChronoWave를 수동으로 옵트아웃 할 수 있도록 한다 - 굳이 옵트아웃을 시켜야 하는가?
+  - [x] **(중요)** safety zone을 존중해야 한다: 사용자가 safety zone 내부에 있다면, ChronoWave 매칭 대상에서 제외한다
 
 
 
