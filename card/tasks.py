@@ -51,8 +51,6 @@ def send_card_distribution_notification():
         distributions = CardDistribution.objects.filter(
             reveal_phase__in=[
                 CardDistribution.RevealPhase.FULLY_REVEALED,
-                CardDistribution.RevealPhase.BLURRY_SOFT,
-                CardDistribution.RevealPhase.BLURRY_STRONG,
             ],
             user__location__timezone=tz_name,
             created_at__gte=today_start.astimezone(pytz.UTC),
