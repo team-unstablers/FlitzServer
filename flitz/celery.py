@@ -38,7 +38,12 @@ app.conf.beat_schedule = {
     'poll-user-deletion-phase': {
         'task': 'user.tasks.poll_user_deletion_phase',
         'schedule': crontab(hour='*', minute=0),  # 1시간마다 실행
-    }
+    },
+
+    'send-card-distribution-notification': {
+        'task': 'card.tasks.send_card_distribution_notification',
+        'schedule': crontab(hour='*', minute=0),  # 매 1시간마다 실행
+    },
 }
 
 
