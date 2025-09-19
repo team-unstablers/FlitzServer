@@ -26,6 +26,8 @@ class UserLocation(models.Model, LocationDistanceMixin):
 
         indexes = [
             models.Index(fields=['user']),
+            models.Index(fields=['timezone']),
+
             models.Index(fields=['created_at']),
             models.Index(fields=['updated_at']),
         ]
