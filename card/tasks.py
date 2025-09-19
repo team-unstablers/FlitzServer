@@ -53,6 +53,7 @@ def send_card_distribution_notification():
                 CardDistribution.RevealPhase.FULLY_REVEALED,
             ],
             user__location__timezone=tz_name,
+            user__disabled_at__isnull=True,
             created_at__gte=today_start.astimezone(pytz.UTC),
             dismissed_at__isnull=True,
             deleted_at__isnull=True,
