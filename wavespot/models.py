@@ -106,10 +106,16 @@ class WaveSpotPost(BaseModel):
     WaveSpot에 게시되는 방문자 포스트 모델
     """
 
+    class AuthorType(models.TextChoices):
+        USER = 'user', 'User'
+        APP_CLIP = 'app_clip', 'App Clip Session'
+
     class Meta:
         indexes = [
             models.Index(fields=['wavespot']),
-            models.Index(fields=['author']),
+            models.Index(fields=['author_type']),
+            models.Index(fields=['author_user']),
+            models.Index(fields=['author_app_clip']),
 
             models.Index(fields=['created_at']),
             models.Index(fields=['updated_at']),
@@ -117,12 +123,46 @@ class WaveSpotPost(BaseModel):
             models.Index(fields=['deleted_at']),
         ]
 
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(author_type='user', author_user__isnull=False, author_app_clip__isnull=True) |
+                    models.Q(author_type='app_clip', author_user__isnull=True, author_app_clip__isnull=False)
+                ),
+                name='wavespot_post_author_integrity'
+            )
+        ]
+
     wavespot = models.ForeignKey(WaveSpot, on_delete=models.CASCADE, related_name='posts')
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wavespot_posts')
+    # 작성자 - 둘 중 하나만 설정됨
+    author_user = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   related_name='wavespot_posts',
+                                   null=True, blank=True)
+    author_app_clip = models.ForeignKey(WaveSpotAppClipSession,
+                                       on_delete=models.CASCADE,
+                                       related_name='posts',
+                                       null=True, blank=True)
+    author_type = models.CharField(max_length=10, choices=AuthorType.choices, db_index=True)
+
     content = models.TextField(max_length=512)
 
     deleted_at = models.DateTimeField(null=True, default=None)
+
+    @property
+    def author(self):
+        """작성자 객체를 반환"""
+        if self.author_type == self.AuthorType.USER:
+            return self.author_user
+        return self.author_app_clip
+
+    def save(self, *args, **kwargs):
+        # author_type 자동 설정
+        if self.author_user:
+            self.author_type = self.AuthorType.USER
+        elif self.author_app_clip:
+            self.author_type = self.AuthorType.APP_CLIP
+        super().save(*args, **kwargs)
 
 class WaveSpotPostFlag(BaseModel):
     """
@@ -175,7 +215,15 @@ class WaveSpotCardDistribution(BaseModel):
     """
 
     class Meta:
-        pass
+        indexes = [
+            models.Index(fields=['wavespot']),
+            models.Index(fields=['card']),
+
+            models.Index(fields=['deleted_at']),
+
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at']),
+        ]
 
     wavespot = models.ForeignKey(WaveSpot, on_delete=models.CASCADE, related_name='card_distributions')
     card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name='wavespot_distributions')
