@@ -34,6 +34,8 @@ from location.views import FlitzWaveViewSet
 from safety.views import UserBlockViewSet, UserContactsTriggerViewSet
 from notice.views import NoticeViewSet
 from support.views import SupportTicketViewSet
+from wavespot.views import WaveSpotViewSet, WaveSpotPostViewSet, WaveSpotCardDistributionViewSet
+
 
 def health_check_handler(request):
     return HttpResponse(content="OK", content_type="text/plain", status=200)
@@ -69,6 +71,10 @@ router.register(r'cards', PublicCardViewSet, basename='Card')
 
 router.register(r'blocks', UserBlockViewSet, basename='UserBlock')
 router.register(r'contact-triggers', UserContactsTriggerViewSet, basename='UserContactsTrigger')
+
+router.register(r'wavespot', WaveSpotViewSet, basename='WaveSpot')
+router.register(r'wavespot/(?P<wavespot_id>[0-9a-fA-F\-]+)/posts', WaveSpotPostViewSet, basename='WaveSpotPosts')
+router.register(r'wavespot/(?P<wavespot_id>[0-9a-fA-F\-]+)/distribution', WaveSpotCardDistributionViewSet, basename='WaveSpotCardDistribution')
 
 router.register(r'notices', NoticeViewSet, basename='Notice')
 router.register(r'support-tickets', SupportTicketViewSet, basename='SupportTicket')

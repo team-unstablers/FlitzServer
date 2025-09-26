@@ -95,12 +95,13 @@ class WaveSpotAppClipSession(BaseModel):
 
     def create_token(self) -> str:
         now = timezone.now()
+        self.expires_at = now + timedelta(hours=3)
 
         token = jwt.encode({
             'sub': str(self.id),
             'iat': now,
-            # 만료 시간은 6시간으로 지정한다. 실질 6시간 이상 체류하는 경우는 거의 없을 것으로 예상됨.
-            'exp': now + timedelta(hours=6),
+            # 만료 시간은 3시간으로 지정한다. 실질 3시간 이상 체류하는 경우는 거의 없을 것으로 예상됨.
+            'exp': self.expires_at,
             'x-flitz-options': '--with-love --wavespot-session',
         }, key=settings.SECRET_KEY, algorithm='HS256')
 
