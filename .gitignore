@@ -187,3 +187,5 @@ flitz-devenv/db-data
 
 .env.production
 .env.development
+
+.idea/copilot*
