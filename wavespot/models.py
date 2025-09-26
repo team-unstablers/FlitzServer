@@ -82,6 +82,11 @@ class WaveSpotAppClipSession(BaseModel):
 
     wavespot = models.ForeignKey(WaveSpot, on_delete=models.CASCADE, related_name='+')
 
+    user_agent = models.CharField(max_length=256, null=True, blank=True)
+
+    # 방문자 닉네임 (16자 이내)
+    nickname = models.CharField(max_length=16, null=False, blank=False)
+
     # IP Address
     initiated_from = models.CharField(max_length=128, null=False, blank=False)
 
@@ -100,6 +105,13 @@ class WaveSpotAppClipSession(BaseModel):
         }, key=settings.SECRET_KEY, algorithm='HS256')
 
         return token
+
+    @property
+    def is_authenticated(self) -> bool:
+        """
+        DRF 호환용
+        """
+        return True
 
 class WaveSpotPost(BaseModel):
     """
@@ -233,13 +245,17 @@ class WaveSpotCardDistribution(BaseModel):
 
     deleted_at = models.DateTimeField(null=True, default=None)
 
-    def can_distribute(self) -> bool:
+    def can_distribute(self, user: User) -> bool:
         """
         이 카드를 사용자가 가져갈 수 있는지 여부를 반환합니다.
         """
 
         if self.deleted_at is not None:
             # ASSERTION: 이미 삭제된 카드는 가져갈 수 없습니다.
+            return False
+
+        if user.is_blocked_by(self.card.user) or self.card.user.is_blocked_by(user):
+            # ASSERTION: 차단 상태인 경우 카드를 가져갈 수 없습니다.
             return False
 
         return self.distributed_count < self.quantity
@@ -251,7 +267,7 @@ class WaveSpotCardDistribution(BaseModel):
         :return: 카드를 성공적으로 가져갔으면 True, 이미 가져갔거나 배포할 수 없으면 False
         """
 
-        if not self.can_distribute():
+        if not self.can_distribute(user):
             return False
 
         already_distributed = CardDistribution.objects.filter(user=user, card=self.card).exists()
